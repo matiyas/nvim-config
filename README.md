@@ -101,3 +101,26 @@ npm install -g prettier @vue/language-server
 # Install fd alternative if available
 pkg install -y find
 ```
+
+## Language Server Installation
+
+After setting up the dependencies, you can install language servers for additional languages using Mason:
+
+```vim
+:Mason
+```
+
+Or install specific servers with:
+
+```vim
+:LspInstall <server_name>
+```
+
+Common language servers available:
+- `html-lsp` - HTML intellisense
+- `ruby-lsp` or `solargraph` - Ruby language support
+- `rubocop` - Ruby linting and formatting
+- `lua-language-server` - Lua support
+- `bash-language-server` - Shell script support
+- `typescript-language-server` - TypeScript/JavaScript (already configured)
+- `volar` - Vue.js support (already configured)

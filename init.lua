@@ -1,8 +1,6 @@
 require("config.lazy")
-require("lazy").setup({
-  {"nvim-treesitter/nvim-treesitter", branch = 'master', lazy = false, build = ":TSUpdate"}
-})
 
 vim.opt.colorcolumn = "120"
-vim.cmd("colorscheme tokyonight-night")
+vim.cmd("colorscheme vscode")
 vim.opt.relativenumber = false
+vim.opt.guicursor = "n-v-c:block-Cursor,i:ver25-Cursor"
