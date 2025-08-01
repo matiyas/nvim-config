@@ -77,10 +77,10 @@ npm install -g prettier @vue/language-server
     ```powershell
     # Install core tools
     choco install neovim git mingw cmake nodejs python shellcheck stylua shfmt ripgrep fd fzf lazygit
-    
+
     # Install Node.js tools
     npm install -g prettier @vue/language-server
-    
+
     # Install Python tools
     pip install flake8
     ```
@@ -124,3 +124,21 @@ Common language servers available:
 - `bash-language-server` - Shell script support
 - `typescript-language-server` - TypeScript/JavaScript (already configured)
 - `volar` - Vue.js support (already configured)
+
+### Vue Development Setup
+
+For Vue.js development with proper TypeScript support:
+
+1. **Install Vue Language Server** (specific version required):
+   ```vim
+   :MasonInstall vue-language-server@1.8.27
+   ```
+
+2. **Configure tsconfig.json** in your Vue project:
+   ```json
+   {
+     "compilerOptions": {
+       "plugins": [{ "name": "@vue/typescript-plugin" }]
+     }
+   }
+   ```
