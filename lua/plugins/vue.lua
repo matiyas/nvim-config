@@ -31,43 +31,21 @@ return {
       --   capabilities = capabilities,
       -- })
 
-      local mason_registry = require("mason-registry")
-      local vue_language_server_path = mason_registry.get_package("vue-language-server"):get_install_path() .. "/node_modules/@vue/language-server/node_modules/@vue/typescript-plugin"
+      -- Setup Volar (Vue Language Server)
+      lspconfig.volar.setup({
+        capabilities = capabilities,
+        filetypes = { "vue" },
+        init_options = {
+          vue = {
+            hybridMode = false,
+          },
+        },
+      })
 
+      -- Setup TypeScript server for .ts/.js files (exclude .vue files)
       lspconfig.ts_ls.setup({
         capabilities = capabilities,
-        init_options = {
-          plugins = {
-            {
-              name = "@vue/typescript-plugin",
-              location = vue_language_server_path,
-              languages = { "vue" },
-            }
-          },
-          preferences = {
-            includeInlayParameterNameHints = "all",
-            includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-            includeInlayFunctionParameterTypeHints = true,
-            includeInlayVariableTypeHints = true,
-            includeInlayPropertyDeclarationTypeHints = true,
-            includeInlayFunctionLikeReturnTypeHints = true,
-            includeInlayEnumMemberValueHints = true,
-          }
-        },
-        settings = {
-          typescript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
-              includeInlayPropertyDeclarationTypeHints = true,
-              includeInlayFunctionLikeReturnTypeHints = true,
-              includeInlayEnumMemberValueHints = true,
-            }
-          }
-        },
-        filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" }
+        filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact" },
       })
 
       lspconfig.html.setup({
