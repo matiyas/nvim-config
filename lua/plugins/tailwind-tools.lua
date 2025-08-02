@@ -7,5 +7,5 @@ return {
     "nvim-telescope/telescope.nvim",
     "neovim/nvim-lspconfig",
   },
-  opts = {} -- your configuration
+  opts = {}, -- your configuration
 }
