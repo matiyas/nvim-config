@@ -18,3 +18,5 @@ vim.diagnostic.config({
 
 vim.opt.ignorecase = true -- Ignore case in searches
 vim.opt.smartcase = false -- But make it case-sensitive if uppercase letters are used
+
+vim.lsp.set_log_level("debug")
