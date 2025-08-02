@@ -9,7 +9,6 @@ return {
       -- Enable italic comments
       italic_comments = true,
     })
-    require("vscode").load('light')
+    require("vscode").load("light")
   end,
 }
-
