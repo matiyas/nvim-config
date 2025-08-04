@@ -17,5 +17,23 @@ vim.keymap.set("n", "<leader>cp", function()
   print("Copied path: " .. vim.fn.expand("%"))
 end, { desc = "Copy file relative path" })
 
-vim.keymap.set("n", "<leader>gd", ":DiffviewOpen<CR>", { desc = "Open git diff view" })
+vim.keymap.set("n", "<leader>gd", function()
+  local diffview = require("diffview.lib")
+  local view = diffview.get_current_view()
+  if view then
+    -- If diffview is open, focus on its tab
+    for i, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
+      for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+        local bufnr = vim.api.nvim_win_get_buf(winid)
+        local bufname = vim.api.nvim_buf_get_name(bufnr)
+        if bufname:match("^diffview://") then
+          vim.api.nvim_set_current_tabpage(tabpage)
+          return
+        end
+      end
+    end
+  end
+  -- If no diffview found, open a new one
+  vim.cmd("DiffviewOpen")
+end, { desc = "Open or focus git diff view" })
 vim.keymap.set("n", "<leader>gq", ":DiffviewClose<CR>", { desc = "Close git diff view" })
