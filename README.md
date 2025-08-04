@@ -14,6 +14,9 @@ Refer to the [documentation](https://lazyvim.github.io/installation) to get star
 # Install core dependencies
 brew install neovim git gcc cmake node python shellcheck stylua ripgrep fd fzf lazygit
 
+# Install theme switching support (automatic dark/light mode)
+brew install cormacrelf/tap/dark-notify
+
 # Install formatters and additional tools
 brew install --cask shfmt
 npm install -g prettier @vue/language-server
