@@ -1,7 +1,7 @@
 require("config.lazy")
 
 vim.opt.colorcolumn = "120"
-vim.cmd("colorscheme tokyonight-night")
+vim.cmd("colorscheme tokyonight-day")
 vim.opt.relativenumber = false
 vim.opt.guicursor = "n-v-c:block-Cursor,i:ver25-Cursor"
 
@@ -19,4 +19,4 @@ vim.diagnostic.config({
 vim.opt.ignorecase = true -- Ignore case in searches
 vim.opt.smartcase = false -- But make it case-sensitive if uppercase letters are used
 
-vim.lsp.set_log_level("debug")
+-- vim.lsp.set_log_level("debug")
