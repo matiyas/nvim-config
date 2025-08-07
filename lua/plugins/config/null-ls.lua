@@ -16,6 +16,13 @@ local sources = {
 
   -- cpp
   b.formatting.clang_format,
+
+  -- Ruby
+  b.formatting.rubocop.with({
+    condition = function(utils)
+      return utils.root_has_file({ ".rubocop.yml", ".rubocop.yaml" })
+    end,
+  }),
 }
 
 null_ls.setup({
@@ -31,7 +38,11 @@ null_ls.setup({
         group = augroup,
         buffer = bufnr,
         callback = function()
-          vim.lsp.buf.format({ bufnr = bufnr })
+          vim.lsp.buf.format({
+            bufnr = bufnr,
+            timeout_ms = 10000, -- 10 second timeout
+            async = false,
+          })
         end,
       })
     end
