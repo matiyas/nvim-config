@@ -18,18 +18,15 @@ vim.keymap.set("n", "<leader>cp", function()
 end, { desc = "Copy file relative path" })
 
 vim.keymap.set("n", "<leader>gd", function()
-  local diffview = require("diffview.lib")
-  local view = diffview.get_current_view()
-  if view then
-    -- If diffview is open, focus on its tab
-    for i, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
-      for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-        local bufnr = vim.api.nvim_win_get_buf(winid)
-        local bufname = vim.api.nvim_buf_get_name(bufnr)
-        if bufname:match("^diffview://") then
-          vim.api.nvim_set_current_tabpage(tabpage)
-          return
-        end
+  -- Check if there's already a diffview tab open
+  for i, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
+    for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+      local bufnr = vim.api.nvim_win_get_buf(winid)
+      local bufname = vim.api.nvim_buf_get_name(bufnr)
+      -- Look for diffview buffers (they typically start with diffview://)
+      if bufname:match("^diffview://") or bufname:match("DiffviewFiles") then
+        vim.api.nvim_set_current_tabpage(tabpage)
+        return
       end
     end
   end
@@ -37,3 +34,23 @@ vim.keymap.set("n", "<leader>gd", function()
   vim.cmd("DiffviewOpen")
 end, { desc = "Open or focus git diff view" })
 vim.keymap.set("n", "<leader>gq", ":DiffviewClose<CR>", { desc = "Close git diff view" })
+vim.keymap.set("n", "<M-C-n>", "<cmd>Scratch<cr>")
+vim.keymap.set("n", "<M-C-o>", "<cmd>ScratchOpen<cr>")
+
+-- Create LspFormat command
+vim.api.nvim_create_user_command("LspFormat", function()
+  vim.lsp.buf.format({ async = true })
+end, { desc = "Format current buffer with LSP" })
+
+-- Create shortcut for LspFormat
+vim.keymap.set("n", "<leader>lf", "<cmd>LspFormat<cr>", { desc = "Format buffer with LSP" })
+
+-- Format JSON with jq
+vim.keymap.set("n", "<leader>jq", function()
+  local filename = vim.fn.expand("%:t")
+  if vim.bo.filetype == "json" or filename:match("%.json$") then
+    vim.cmd(":%!jq .")
+  else
+    print("Not a JSON file")
+  end
+end, { desc = "Format JSON with jq" })
