@@ -1,4 +1,9 @@
 return {
   "mason-org/mason.nvim",
-  opts = {},
+  opts = function(_, opts)
+    vim.list_extend(opts.ensure_installed, {
+      "rubocop",
+      "solargraph",
+    })
+  end,
 }
