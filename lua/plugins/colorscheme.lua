@@ -5,14 +5,17 @@ return {
     priority = 1000,
     config = function()
       require("tokyonight").setup({
-        style = "night",
+        style = "moon", -- Default to moon theme
         transparent = false,
         styles = {
           comments = { italic = true },
+          keywords = { italic = true },
         },
+        on_colors = function(colors) end,
+        on_highlights = function(highlights, colors) end,
       })
 
-      -- Set up dark-notify integration
+      -- Set up dark-notify integration for automatic theme switching
       if vim.fn.has("mac") == 1 then
         require("dark_notify").run({
           onchange = function(mode)
@@ -24,7 +27,7 @@ return {
           end,
         })
       else
-        vim.cmd("colorscheme tokyonight-night")
+        vim.cmd("colorscheme tokyonight-moon")
       end
     end,
   },

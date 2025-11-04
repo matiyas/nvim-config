@@ -1,5 +1,12 @@
 return {
-  "tpope/vim-endwise",
+  "RRethy/nvim-treesitter-endwise",
   event = "InsertEnter",
-  ft = { "ruby", "lua", "vim", "sh", "zsh", "bash" },
+  dependencies = { "nvim-treesitter/nvim-treesitter" },
+  config = function()
+    require("nvim-treesitter.configs").setup({
+      endwise = {
+        enable = true,
+      },
+    })
+  end,
 }

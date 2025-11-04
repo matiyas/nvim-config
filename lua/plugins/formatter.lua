@@ -16,12 +16,12 @@ return {
         },
 
         -- TypeScript/JavaScript
-        typescript = {
-          require("formatter.filetypes.typescript").prettier,
-        },
-        javascript = {
-          require("formatter.filetypes.javascript").prettier,
-        },
+        -- typescript = {
+        --   require("formatter.filetypes.typescript").prettier,
+        -- },
+        -- javascript = {
+        --   require("formatter.filetypes.javascript").prettier,
+        -- },
 
         -- Web
         html = {
@@ -34,6 +34,9 @@ return {
           require("formatter.filetypes.markdown").prettier,
         },
 
+        -- Vue with Volar formatter (same as VSCode Vue.volar)
+        vue = {},
+
         -- C/C++
         c = {
           require("formatter.filetypes.c").clangformat,
@@ -41,9 +44,6 @@ return {
         cpp = {
           require("formatter.filetypes.cpp").clangformat,
         },
-
-        vue = {},
-
         -- Ruby with auto-correction
         ruby = {
           function()

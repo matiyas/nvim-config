@@ -3,7 +3,9 @@ return {
   version = "*",
   event = "VeryLazy",
   config = function()
-    require("nvim-surround").setup({
+    local nvim_surround = require("nvim-surround")
+
+    nvim_surround.setup({
       keymaps = {
         insert = "<C-g>s",
         insert_line = "<C-g>S",
@@ -17,6 +19,21 @@ return {
         change = "cs",
         change_line = "cS",
       },
+    })
+
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "ruby",
+      callback = function()
+        nvim_surround.buffer_setup({
+          surrounds = {
+            ["b"] = { add = { "begin\n", "\nend" } },
+            ["D"] = { add = { "do\n", "\nend" } },
+            ["n"] = { add = { "def ", "\nend" } },
+            ["C"] = { add = { "class ", "\nend" } },
+            ["M"] = { add = { "module ", "\nend" } },
+          },
+        })
+      end,
     })
   end,
 }

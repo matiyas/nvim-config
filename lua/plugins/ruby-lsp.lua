@@ -2,6 +2,8 @@ return {
   "neovim/nvim-lspconfig",
   opts = {
     servers = {
+      -- Disable rubocop LSP to avoid duplicate with solargraph
+      rubocop = false,
       solargraph = {
         cmd = { "solargraph", "stdio" },
         filetypes = { "ruby" },
