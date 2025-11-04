@@ -2,10 +2,13 @@ require("config.lazy")
 
 vim.opt.colorcolumn = "120"
 vim.cmd("colorscheme tokyonight-day")
-vim.opt.relativenumber = false
+-- vim.opt.relativenumber = false
 vim.opt.guicursor = "n-v-c:block-Cursor,i:ver25-Cursor"
 vim.opt.ignorecase = true -- Ignore case in searches
 vim.opt.smartcase = false -- But make it case-sensitive if uppercase letters are used
+vim.opt.smartindent = true -- auto-indent new lines based on syntax
+vim.opt.autoindent = true -- copy indent from current line
+vim.opt.cindent = true -- optional: C-like indenting (for code)
 
 -- vim.lsp.set_log_level("debug")
 
@@ -38,3 +41,10 @@ end
 vim.api.nvim_create_user_command("DiffWithClipboard", _G.compare_to_clipboard, { range = true })
 vim.opt.termguicolors = true
 require("bufferline").setup({})
+
+vim.opt.diffopt:append("vertical")
+vim.opt.diffopt:append("iwhite")
+vim.opt.diffopt:append("internal")
+vim.opt.diffopt:append("algorithm:histogram")
+vim.opt.diffopt:append("indent-heuristic")
+vim.opt.diffopt:append("linematch:128")

@@ -1,4 +1,3 @@
 return {
-  "braxtons12/blame_line.nvim",
-  opts = {},
+  "tveskag/nvim-blame-line",
 }

@@ -12,3 +12,9 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*",
   command = [[%s/\s\+$//e]],
 })
+
+-- Enable BlameLine on startup
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*",
+  command = "EnableBlameLine",
+})
