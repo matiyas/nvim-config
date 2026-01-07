@@ -8,6 +8,9 @@ return {
         cmd = { "solargraph", "stdio" },
         filetypes = { "ruby" },
         root_dir = require("lspconfig.util").root_pattern("Gemfile", ".git", "Rakefile"),
+        flags = {
+          debounce_text_changes = 150,
+        },
         settings = {
           solargraph = {
             diagnostics = true,
