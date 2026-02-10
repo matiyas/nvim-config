@@ -148,12 +148,47 @@ Or install specific servers with:
 
 Common language servers available:
 - `html-lsp` - HTML intellisense
-- `ruby-lsp` or `solargraph` - Ruby language support
+- `ruby-lsp` or `solargraph` - Ruby language support (see Ruby setup below)
 - `rubocop` - Ruby linting and formatting
 - `lua-language-server` - Lua support
 - `bash-language-server` - Shell script support
 - `typescript-language-server` - TypeScript/JavaScript (already configured)
 - `volar` - Vue.js support (already configured)
+
+### Ruby Development Setup
+
+For Ruby development with Solargraph language server:
+
+1. **Install Ruby development headers** (required for native extensions):
+
+   **Linux (Debian/Ubuntu):**
+   ```bash
+   sudo apt-get install ruby-dev
+   ```
+
+   **Linux (Arch):**
+   ```bash
+   sudo pacman -S ruby
+   ```
+
+   **macOS:**
+   ```bash
+   # Usually included with Homebrew Ruby
+   brew install ruby
+   ```
+
+2. **Install Solargraph gem**:
+   ```bash
+   gem install solargraph
+   ```
+
+3. **Verify installation**:
+   ```bash
+   solargraph --version
+   # Should output version number (e.g., 0.58.2)
+   ```
+
+**Note:** This configuration automatically detects and uses Solargraph from your user gem directory, so it works across different Ruby versions without manual path configuration.
 
 ### Vue Development Setup
 
