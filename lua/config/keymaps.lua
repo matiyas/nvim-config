@@ -13,8 +13,9 @@ vim.keymap.set("n", "<leader><leader>", function()
 end, { desc = "[Find] Files from CWD" })
 
 vim.keymap.set("n", "<leader>cp", function()
-  vim.fn.setreg("+", vim.fn.expand("%"))
-  print("Copied path: " .. vim.fn.expand("%"))
+  local relative_path = vim.fn.expand("%:.")
+  vim.fn.setreg("+", relative_path)
+  print("Copied path: " .. relative_path)
 end, { desc = "Copy file relative path" })
 
 vim.keymap.set("n", "<leader>gd", function()
