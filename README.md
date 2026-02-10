@@ -30,7 +30,23 @@ pip3 install flake8
 sudo apt update
 
 # Install core dependencies
-sudo apt install -y neovim git build-essential cmake nodejs npm python3 python3-pip shellcheck ripgrep fd-find fzf
+# Note: The neovim package in Debian/Ubuntu repositories may be outdated (v0.10.x)
+# LazyVim requires Neovim >= 0.11.2, so we'll install it manually below
+sudo apt install -y git build-essential cmake nodejs npm python3 python3-pip shellcheck ripgrep fd-find fzf
+
+# Install latest Neovim (required: >= 0.11.2 for LazyVim)
+# For ARM64 (Raspberry Pi, etc.):
+cd /tmp
+wget https://github.com/neovim/neovim/releases/latest/download/nvim-linux-arm64.tar.gz
+tar xzf nvim-linux-arm64.tar.gz
+sudo mv nvim-linux-arm64 /usr/local/
+sudo ln -sf /usr/local/nvim-linux-arm64/bin/nvim /usr/local/bin/nvim
+
+# For x86_64:
+# wget https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+# tar xzf nvim-linux64.tar.gz
+# sudo mv nvim-linux64 /usr/local/
+# sudo ln -sf /usr/local/nvim-linux64/bin/nvim /usr/local/bin/nvim
 
 # Install Rust (for stylua and other tools)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -45,16 +61,27 @@ cargo install stylua
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 
 # Install Node.js tools
-npm install -g prettier @vue/language-server
+sudo npm install -g prettier @vue/language-server tree-sitter-cli
 
 # Install Python tools
 pip3 install flake8
 
 # Install lazygit (optional but recommended)
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+# For ARM64:
+curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_arm64.tar.gz"
+# For x86_64:
+# curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
 tar xf lazygit.tar.gz lazygit
 sudo install lazygit /usr/local/bin
+
+# Add Rust, Go, and other tools to PATH
+echo 'export PATH="$PATH:/usr/local/go/bin:$HOME/go/bin:$HOME/.cargo/bin"' >> ~/.bashrc
+echo 'export PATH="$PATH:/usr/local/go/bin:$HOME/go/bin:$HOME/.cargo/bin"' >> ~/.zshrc
+source ~/.bashrc  # or source ~/.zshrc if using zsh
+
+# Create treesitter parser directory
+mkdir -p ~/.local/share/nvim/site/parser
 ```
 
 ### Linux (Arch)
