@@ -5,7 +5,16 @@ return {
   keys = {
     { "<leader>o", "<cmd>Outline<CR>", desc = "Toggle outline" },
   },
+  dependencies = {
+    "epheien/outline-treesitter-provider.nvim",
+  },
   opts = {
+    providers = {
+      priority = { "lsp", "treesitter", "markdown" },
+      markdown = {
+        filetypes = { "markdown" },
+      },
+    },
     symbols = {
       filter = {
         default = { "Function", "Method", "Class", "Module", "Constructor", "Interface", "Struct" },
@@ -20,11 +29,6 @@ return {
         markdown = { "String" },
         xml = { "Class", "Method", "Property", "Field" },
         sh = { "Function", "Variable" },
-      },
-    },
-    providers = {
-      markdown = {
-        filetypes = { "markdown" },
       },
     },
   },
