@@ -33,5 +33,8 @@ return {
     matchup = {
       enable = true,
     },
+    endwise = {
+      enable = true,
+    },
   },
 }
