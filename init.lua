@@ -1,3 +1,8 @@
+-- Compatibility shim for deprecated treesitter API
+if not vim.treesitter.language.ft_to_lang then
+  vim.treesitter.language.ft_to_lang = vim.treesitter.language.get_lang
+end
+
 require("config.lazy")
 
 vim.opt.colorcolumn = "120"
