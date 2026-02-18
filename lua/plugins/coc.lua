@@ -1,68 +1,44 @@
 return {
   "neoclide/coc.nvim",
   branch = "release",
+  ft = { "vue" },
   init = function()
     vim.g.coc_node_path = "/home/linuxbrew/.linuxbrew/opt/node@18/bin/node"
   end,
   config = function()
-    -- CoC keymaps to match LazyVim LSP defaults
-    local opts = { silent = true, noremap = true, expr = true }
+    local coc_filetypes = { vue = true }
 
-    -- Use tab for trigger completion with characters ahead and navigate
-    vim.keymap.set("i", "<TAB>", [[coc#pum#visible() ? coc#pum#next(1) : "\<Tab>"]], opts)
-    vim.keymap.set("i", "<S-TAB>", [[coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"]], opts)
+    local function setup_coc_keymaps()
+      local opts = { silent = true, noremap = true, expr = true, buffer = true }
 
-    -- Use <c-space> to trigger completion
-    vim.keymap.set("i", "<c-space>", "coc#refresh()", { silent = true, expr = true })
+      vim.keymap.set("i", "<TAB>", [[coc#pum#visible() ? coc#pum#next(1) : "\<Tab>"]], opts)
+      vim.keymap.set("i", "<S-TAB>", [[coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"]], opts)
+      vim.keymap.set("i", "<c-space>", "coc#refresh()", { silent = true, expr = true, buffer = true })
+      vim.keymap.set("i", "<cr>", [[coc#pum#visible() ? coc#pum#confirm() : "\<CR>"]], opts)
 
-    -- Use <cr> to confirm completion
-    vim.keymap.set("i", "<cr>", [[coc#pum#visible() ? coc#pum#confirm() : "\<CR>"]], opts)
+      local nopts = { silent = true, buffer = true }
+      vim.keymap.set("n", "gd", "<Plug>(coc-definition)", nopts)
+      vim.keymap.set("n", "gr", "<Plug>(coc-references)", nopts)
+      vim.keymap.set("n", "gI", "<Plug>(coc-implementation)", nopts)
+      vim.keymap.set("n", "gy", "<Plug>(coc-type-definition)", nopts)
+      vim.keymap.set("n", "gD", "<Plug>(coc-declaration)", nopts)
+      vim.keymap.set("n", "K", function()
+        if vim.api.nvim_eval("coc#rpc#ready()") then
+          vim.fn.CocActionAsync("doHover")
+        end
+      end, nopts)
+      vim.keymap.set("n", "<leader>ca", "<Plug>(coc-codeaction-cursor)", nopts)
+      vim.keymap.set("x", "<leader>ca", "<Plug>(coc-codeaction-selected)", nopts)
+      vim.keymap.set("n", "<leader>cr", "<Plug>(coc-rename)", nopts)
+      vim.keymap.set("n", "[d", "<Plug>(coc-diagnostic-prev)", nopts)
+      vim.keymap.set("n", "]d", "<Plug>(coc-diagnostic-next)", nopts)
+      vim.keymap.set("n", "<leader>cf", "<Plug>(coc-format)", nopts)
+      vim.keymap.set("x", "<leader>cf", "<Plug>(coc-format-selected)", nopts)
+    end
 
-    -- Navigation keymaps matching LazyVim LSP defaults
-    vim.keymap.set("n", "gd", "<Plug>(coc-definition)", { silent = true, desc = "Go to definition" })
-    vim.keymap.set("n", "gr", "<Plug>(coc-references)", { silent = true, desc = "Show references" })
-    vim.keymap.set("n", "gI", "<Plug>(coc-implementation)", { silent = true, desc = "Go to implementation" })
-    vim.keymap.set("n", "gy", "<Plug>(coc-type-definition)", { silent = true, desc = "Go to type definition" })
-    vim.keymap.set("n", "gD", "<Plug>(coc-declaration)", { silent = true, desc = "Go to declaration" })
-
-    -- Hover and help
-    vim.keymap.set("n", "K", function()
-      local cw = vim.fn.expand("<cword>")
-      if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
-        vim.api.nvim_command("h " .. cw)
-      elseif vim.api.nvim_eval("coc#rpc#ready()") then
-        vim.fn.CocActionAsync("doHover")
-      else
-        vim.api.nvim_command("!" .. vim.o.keywordprg .. " " .. cw)
-      end
-    end, { silent = true, desc = "Hover documentation" })
-
-    -- Code actions and refactoring
-    vim.keymap.set("n", "<leader>ca", "<Plug>(coc-codeaction-cursor)", { silent = true, desc = "Code actions" })
-    vim.keymap.set("x", "<leader>ca", "<Plug>(coc-codeaction-selected)", { silent = true, desc = "Code actions" })
-    vim.keymap.set("n", "<leader>cr", "<Plug>(coc-rename)", { silent = true, desc = "Rename symbol" })
-
-    -- Diagnostics navigation
-    vim.keymap.set("n", "[d", "<Plug>(coc-diagnostic-prev)", { silent = true, desc = "Previous diagnostic" })
-    vim.keymap.set("n", "]d", "<Plug>(coc-diagnostic-next)", { silent = true, desc = "Next diagnostic" })
-
-    -- Format code
-    vim.keymap.set("n", "<leader>cf", "<Plug>(coc-format)", { silent = true, desc = "Format code" })
-    vim.keymap.set("x", "<leader>cf", "<Plug>(coc-format-selected)", { silent = true, desc = "Format selected" })
-
-    -- Show all diagnostics
-    vim.keymap.set("n", "<leader>cd", ":<C-u>CocList diagnostics<cr>", { silent = true, desc = "Show diagnostics" })
-
-    -- Manage extensions
-    vim.keymap.set("n", "<leader>ce", ":<C-u>CocList extensions<cr>", { silent = true, desc = "Manage extensions" })
-
-    -- Show commands
-    vim.keymap.set("n", "<leader>cc", ":<C-u>CocList commands<cr>", { silent = true, desc = "Show commands" })
-
-    -- Search workspace symbols
-    vim.keymap.set("n", "<leader>cs", ":<C-u>CocList -I symbols<cr>", { silent = true, desc = "Search symbols" })
-
-    -- Outline
-    vim.keymap.set("n", "<leader>co", ":<C-u>CocList outline<cr>", { silent = true, desc = "Document outline" })
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = vim.tbl_keys(coc_filetypes),
+      callback = setup_coc_keymaps,
+    })
   end,
 }
