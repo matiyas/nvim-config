@@ -23,7 +23,6 @@ return {
     },
     sync_install = false,
     auto_install = true,
-    prefer_git = false,
     highlight = {
       enable = true,
       additional_vim_regex_highlighting = false,
