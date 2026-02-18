@@ -1,6 +1,9 @@
 return {
   "neoclide/coc.nvim",
   branch = "release",
+  init = function()
+    vim.g.coc_node_path = "/home/linuxbrew/.linuxbrew/opt/node@18/bin/node"
+  end,
   config = function()
     -- CoC keymaps to match LazyVim LSP defaults
     local opts = { silent = true, noremap = true, expr = true }
