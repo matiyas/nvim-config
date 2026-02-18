@@ -3,10 +3,6 @@ return {
   event = "InsertEnter",
   dependencies = { "nvim-treesitter/nvim-treesitter" },
   config = function()
-    require("nvim-treesitter.configs").setup({
-      endwise = {
-        enable = true,
-      },
-    })
+    require("nvim-treesitter-endwise").setup({})
   end,
 }
