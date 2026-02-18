@@ -15,6 +15,10 @@ end, { desc = "[Find] Files from CWD" })
 vim.keymap.set("n", "<leader>cp", function()
   local relative_path = vim.fn.expand("%:.")
   vim.fn.setreg("+", relative_path)
+  local ok, osc52 = pcall(require, "osc52")
+  if ok then
+    osc52.copy(relative_path)
+  end
   print("Copied path: " .. relative_path)
 end, { desc = "Copy file relative path" })
 
