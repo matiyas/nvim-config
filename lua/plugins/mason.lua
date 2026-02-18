@@ -1,9 +1,16 @@
 return {
-  "mason-org/mason.nvim",
-  opts = function(_, opts)
-    -- vim.list_extend(opts.ensure_installed, {
-    --   "rubocop",
-    --   "solargraph",
-    -- })
-  end,
+  {
+    "mason-org/mason.nvim",
+    opts = {
+      ensure_installed = {},
+    },
+  },
+  {
+    "mason-org/mason-lspconfig.nvim",
+    opts = {
+      automatic_installation = {
+        exclude = { "solargraph", "rubocop", "ruby_lsp" },
+      },
+    },
+  },
 }
