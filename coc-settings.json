@@ -4,6 +4,7 @@
   "volar.takeOverMode.enabled": false,
   "volar.completion.autoImportComponent": true,
   "volar.inlayHints.eventArgumentInInlineHandlers": false,
+  "vue.server.hybridMode": false,
   "vetur.enable": false,
   "[vue]": {
     "coc.preferences.formatOnSave": true
