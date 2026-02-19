@@ -8,9 +8,13 @@ return {
         require("osc52").copy(table.concat(lines, "\n"))
       end
 
+      local clipboard_file = vim.env.CLIPBOARD_FILE or "/tmp/shared_clipboard.txt"
+
       local function get_paste_cmd()
         if vim.fn.executable("pbpaste") == 1 then
           return "pbpaste"
+        elseif vim.fn.filereadable(clipboard_file) == 1 then
+          return "cat " .. clipboard_file
         elseif vim.env.TMUX and vim.fn.executable("tmux") == 1 then
           return "tmux save-buffer -"
         elseif vim.fn.executable("xclip") == 1 then
