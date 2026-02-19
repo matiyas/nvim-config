@@ -1,6 +1,6 @@
 {
   "volar.enable": true,
-  "volar.useWorkspaceTsdk": true,
+  "volar.useWorkspaceTsdk": false,
   "volar.takeOverMode.enabled": false,
   "volar.completion.autoImportComponent": true,
   "volar.inlayHints.eventArgumentInInlineHandlers": false,
