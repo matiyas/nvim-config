@@ -9,7 +9,8 @@ return {
       end
 
       local function paste()
-        return { vim.fn.split(vim.fn.getreg(""), "\n"), vim.fn.getregtype("") }
+        local content = vim.fn.system("pbpaste")
+        return { vim.fn.split(content, "\n"), "c" }
       end
 
       vim.g.clipboard = {
