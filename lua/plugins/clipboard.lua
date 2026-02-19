@@ -4,7 +4,11 @@ return {
     config = function()
       vim.opt.clipboard = "unnamedplus"
 
-      local function copy(lines, _)
+      local cache = { lines = {}, regtype = "v" }
+
+      local function copy(lines, regtype)
+        cache.lines = lines
+        cache.regtype = regtype
         require("osc52").copy(table.concat(lines, "\n"))
       end
 
@@ -34,7 +38,7 @@ return {
           local content = vim.fn.system(paste_cmd)
           return { vim.fn.split(content, "\n"), "c" }
         end
-        return { vim.fn.split(vim.fn.getreg("+"), "\n"), vim.fn.getregtype("+") }
+        return { cache.lines, cache.regtype }
       end
 
       vim.g.clipboard = {
