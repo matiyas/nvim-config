@@ -1,18 +1,11 @@
 {
-  "vetur.format.defaultFormatter.html": "js-beautify-html",
-  "vetur.format.defaultFormatterOptions": {
-    "prettier": {
-      "semi": false,
-      "singleQuote": true,
-      "trailingComma": "none",
-      "htmlWhitespaceSensitivity": "ignore",
-      "html.format.wrapAttributes": "auto"
-    },
-    "js-beautify-html": {
-      "wrap_attributes": "force-aligned"
-    }
-  },
+  "volar.enable": true,
+  "volar.useWorkspaceTsdk": true,
+  "volar.takeOverMode.enabled": false,
+  "volar.completion.autoImportComponent": true,
+  "volar.inlayHints.eventArgumentInInlineHandlers": false,
+  "vetur.enable": false,
   "[vue]": {
-    "editor.defaultFormatter": "js-beautify"
+    "coc.preferences.formatOnSave": true
   }
 }
