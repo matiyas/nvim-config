@@ -5,25 +5,14 @@ return {
     local util = require("formatter.util")
 
     formatter.setup({
-      -- Enable logging to help with debugging
       logging = true,
       log_level = vim.log.levels.WARN,
 
       filetype = {
-        -- Lua
         lua = {
           require("formatter.filetypes.lua").stylua,
         },
 
-        -- TypeScript/JavaScript
-        -- typescript = {
-        --   require("formatter.filetypes.typescript").prettier,
-        -- },
-        -- javascript = {
-        --   require("formatter.filetypes.javascript").prettier,
-        -- },
-
-        -- Web
         html = {
           require("formatter.filetypes.html").prettier,
         },
@@ -34,30 +23,36 @@ return {
           require("formatter.filetypes.markdown").prettier,
         },
 
-        -- Vue with Volar formatter (same as VSCode Vue.volar)
-        vue = {},
+        -- Vue: custom formatter (js-beautify for template + prettier for script/style)
+        vue = {
+          function()
+            return {
+              exe = "vue-format",
+              stdin = true,
+            }
+          end,
+        },
 
-        -- C/C++
         c = {
           require("formatter.filetypes.c").clangformat,
         },
         cpp = {
           require("formatter.filetypes.cpp").clangformat,
         },
-        -- Ruby with auto-correction
+
         ruby = {
           function()
             return {
               exe = "rubocop",
               args = {
-                "-A", -- Use -A for full auto-correction
+                "-A",
                 "--stdin",
                 util.escape_path(util.get_current_buffer_file_name()),
                 "--format",
                 "files",
               },
               stdin = true,
-              ignore_exitcode = true, -- Don't treat rubocop warnings as errors
+              ignore_exitcode = true,
               transform = function(text)
                 table.remove(text, 1)
                 table.remove(text, 1)
@@ -69,10 +64,11 @@ return {
       },
     })
 
-    -- Format on save for all configured filetypes
-    vim.api.nvim_create_augroup("FormatAutogroup", {})
+    -- Format on save
+    vim.api.nvim_create_augroup("FormatAutogroup", { clear = true })
     vim.api.nvim_create_autocmd("BufWritePost", {
       group = "FormatAutogroup",
+      pattern = { "*.lua", "*.html", "*.css", "*.md", "*.c", "*.cpp", "*.rb", "*.vue" },
       command = "FormatWrite",
     })
   end,
