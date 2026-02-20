@@ -51,31 +51,59 @@ local function is_image(filepath)
   return ext and image_extensions[ext:lower()]
 end
 
---- Creates a previewer that uses chafa for images and default for other files.
-local function create_file_previewer()
+--- Creates an image previewer using chafa in a terminal buffer.
+local function create_image_previewer()
   local previewers = require('telescope.previewers')
-  local Job = require('plenary.job')
 
-  return previewers.new_buffer_previewer({
+  return previewers.new_termopen_previewer({
+    title = 'Image Preview',
+    get_command = function(entry, status)
+      local filepath = entry.path or entry.filename
+      local preview = status.preview_win
+      local width = vim.api.nvim_win_get_width(preview)
+      local height = vim.api.nvim_win_get_height(preview)
+
+      return { 'chafa', '--animate=off', '--center=on', '--size=' .. width .. 'x' .. height, filepath }
+    end,
+  })
+end
+
+--- Creates the default buffer previewer for non-image files.
+local function create_buffer_previewer()
+  local previewers = require('telescope.previewers')
+  return previewers.vim_buffer_cat.new({})
+end
+
+--- Cached previewers to avoid recreation.
+local image_previewer = nil
+local buffer_previewer = nil
+
+--- Returns appropriate previewer based on file type.
+local function get_file_previewer()
+  if not image_previewer then image_previewer = create_image_previewer() end
+  if not buffer_previewer then buffer_previewer = create_buffer_previewer() end
+
+  local previewers = require('telescope.previewers')
+
+  return previewers.new({
     title = 'File Preview',
-    define_preview = function(self, entry, status)
+    setup = function(self)
+      image_previewer:setup()
+      buffer_previewer:setup()
+      return {}
+    end,
+    teardown = function(self)
+      if image_previewer.teardown then image_previewer:teardown() end
+      if buffer_previewer.teardown then buffer_previewer:teardown() end
+    end,
+    preview_fn = function(self, entry, status)
       local filepath = entry.path or entry.filename
       if not filepath then return end
 
       if is_image(filepath) then
-        local win_width = vim.api.nvim_win_get_width(status.preview_win)
-        local win_height = vim.api.nvim_win_get_height(status.preview_win)
-
-        Job:new({
-          command = 'chafa',
-          args = { '--size=' .. win_width .. 'x' .. win_height, '--animate=off', filepath },
-          on_exit = vim.schedule_wrap(function(j)
-            if not self.state or not vim.api.nvim_buf_is_valid(self.state.bufnr) then return end
-            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, j:result())
-          end),
-        }):start()
+        image_previewer:preview_fn(entry, status)
       else
-        previewers.buffer_previewer_maker(filepath, self.state.bufnr, { bufname = self.state.bufname })
+        buffer_previewer:preview_fn(entry, status)
       end
     end,
   })
@@ -92,7 +120,7 @@ vim.keymap.set('n', '<leader><leader>', function()
   require('telescope.builtin').find_files({
     search_dirs = get_search_dirs(),
     path_display = relative_path_display,
-    previewer = create_file_previewer(),
+    previewer = get_file_previewer(),
   })
 end, { desc = '[Find] Files from CWD' })
 
