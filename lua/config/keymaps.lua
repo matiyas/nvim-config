@@ -43,6 +43,44 @@ local function relative_path_display(_, path)
   return make_relative_path(path)
 end
 
+local image_extensions = { png = true, jpg = true, jpeg = true, gif = true, webp = true, svg = true, ico = true }
+
+--- Checks if a file path is an image based on extension.
+local function is_image(filepath)
+  local ext = filepath:match('%.([^%.]+)$')
+  return ext and image_extensions[ext:lower()]
+end
+
+--- Creates a previewer that uses chafa for images and default for other files.
+local function create_file_previewer()
+  local previewers = require('telescope.previewers')
+  local Job = require('plenary.job')
+
+  return previewers.new_buffer_previewer({
+    title = 'File Preview',
+    define_preview = function(self, entry, status)
+      local filepath = entry.path or entry.filename
+      if not filepath then return end
+
+      if is_image(filepath) then
+        local win_width = vim.api.nvim_win_get_width(status.preview_win)
+        local win_height = vim.api.nvim_win_get_height(status.preview_win)
+
+        Job:new({
+          command = 'chafa',
+          args = { '--size=' .. win_width .. 'x' .. win_height, '--animate=off', filepath },
+          on_exit = vim.schedule_wrap(function(j)
+            if not self.state or not vim.api.nvim_buf_is_valid(self.state.bufnr) then return end
+            vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, j:result())
+          end),
+        }):start()
+      else
+        previewers.buffer_previewer_maker(filepath, self.state.bufnr, { bufname = self.state.bufname })
+      end
+    end,
+  })
+end
+
 vim.keymap.set('n', '<leader>/', function()
   require('telescope').extensions.live_grep_args.live_grep_args({
     search_dirs = get_search_dirs(),
@@ -54,6 +92,7 @@ vim.keymap.set('n', '<leader><leader>', function()
   require('telescope.builtin').find_files({
     search_dirs = get_search_dirs(),
     path_display = relative_path_display,
+    previewer = create_file_previewer(),
   })
 end, { desc = '[Find] Files from CWD' })
 
