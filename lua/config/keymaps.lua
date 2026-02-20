@@ -57,6 +57,13 @@ vim.keymap.set('n', '<leader><leader>', function()
   })
 end, { desc = '[Find] Files from CWD' })
 
+vim.keymap.set('n', '<leader>fm', function()
+  require('telescope').extensions.media_files.media_files({
+    search_dirs = get_search_dirs(),
+    path_display = relative_path_display,
+  })
+end, { desc = '[Find] Media files' })
+
 vim.keymap.set('n', '<leader>cp', function()
   local relative_path = vim.fn.expand('%:.')
   vim.fn.setreg('+', relative_path)
