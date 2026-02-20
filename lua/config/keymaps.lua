@@ -2,18 +2,23 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
---- Returns search directories including shared folder when in scout/admin.
+--- Returns search directories including sibling dirs specified in NVIM_SIBLING_SEARCH_DIRS.
+--- Example: NVIM_SIBLING_SEARCH_DIRS=shared will include ../shared in searches.
 local function get_search_dirs()
   local cwd = vim.fn.getcwd()
+  local sibling_dirs = vim.env.NVIM_SIBLING_SEARCH_DIRS
+
+  if not sibling_dirs or sibling_dirs == '' then return { cwd } end
+
   local parent = vim.fn.fnamemodify(cwd, ':h')
-  local shared = parent .. '/shared'
+  local dirs = { cwd }
 
-  if vim.fn.isdirectory(shared) == 0 then return { cwd } end
+  for name in sibling_dirs:gmatch('[^,]+') do
+    local path = parent .. '/' .. name:match('^%s*(.-)%s*$')
+    if vim.fn.isdirectory(path) == 1 then table.insert(dirs, path) end
+  end
 
-  local dirname = vim.fn.fnamemodify(cwd, ':t')
-  if dirname == 'scout' or dirname == 'admin' then return { cwd, shared } end
-
-  return { cwd }
+  return dirs
 end
 
 vim.keymap.set('n', '<leader>/', function()
