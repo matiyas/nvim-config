@@ -16,37 +16,67 @@ process.stdin.on("end", () => {
   }
 })
 
+function extractSection(content, tagName) {
+  const openTagRegex = new RegExp(`<${tagName}(\\s[^>]*)?>`, "gi")
+  const closeTag = `</${tagName}>`
+
+  const openMatch = openTagRegex.exec(content)
+  if (!openMatch) return null
+
+  const attrs = openMatch[1] || ""
+  let startIndex = openMatch.index + openMatch[0].length
+  let depth = 1
+  let i = startIndex
+
+  while (i < content.length && depth > 0) {
+    const remainingContent = content.slice(i)
+    const nextOpen = remainingContent.search(new RegExp(`<${tagName}(\\s|>)`, "i"))
+    const nextClose = remainingContent.toLowerCase().indexOf(closeTag.toLowerCase())
+
+    if (nextClose === -1) break
+
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++
+      i += nextOpen + 1
+    } else {
+      depth--
+      if (depth === 0) {
+        return {
+          attrs,
+          content: content.slice(startIndex, i + nextClose)
+        }
+      }
+      i += nextClose + closeTag.length
+    }
+  }
+  return null
+}
+
 function formatVue(content) {
-  const templateMatch = content.match(/<template(\s[^>]*)?>([\s\S]*?)<\/template>/i)
-  const scriptMatch = content.match(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/i)
-  const styleMatch = content.match(/<style(\s[^>]*)?>([\s\S]*?)<\/style>/i)
+  const templateMatch = extractSection(content, "template")
+  const scriptMatch = extractSection(content, "script")
+  const styleMatch = extractSection(content, "style")
 
   let result = ""
 
   if (templateMatch) {
-    const templateAttrs = templateMatch[1] || ""
-    const templateContent = templateMatch[2]
-    const formattedTemplate = formatHtml(templateContent)
+    const formattedTemplate = formatHtml(templateMatch.content)
     const indentedTemplate = formattedTemplate
       .split("\n")
       .map(line => line.length > 0 ? "  " + line : line)
       .join("\n")
-    result += "<template" + templateAttrs + ">\n" + indentedTemplate + "\n</template>\n"
+    result += "<template" + templateMatch.attrs + ">\n" + indentedTemplate + "\n</template>\n"
   }
 
   if (scriptMatch) {
-    const scriptAttrs = scriptMatch[1] || ""
-    const scriptContent = scriptMatch[2]
-    const formattedScript = formatWithPrettier(scriptContent.trim(), "babel")
-    result += "\n<script" + scriptAttrs + ">\n" + formattedScript + "\n</script>\n"
+    const formattedScript = formatWithPrettier(scriptMatch.content.trim(), "babel")
+    result += "\n<script" + scriptMatch.attrs + ">\n" + formattedScript + "\n</script>\n"
   }
 
   if (styleMatch) {
-    const styleAttrs = styleMatch[1] || ""
-    const styleContent = styleMatch[2]
-    const lang = styleAttrs.includes("scss") ? "scss" : "css"
-    const formattedStyle = formatWithPrettier(styleContent.trim(), lang)
-    result += "\n<style" + styleAttrs + ">\n" + formattedStyle + "\n</style>\n"
+    const lang = styleMatch.attrs.includes("scss") ? "scss" : "css"
+    const formattedStyle = formatWithPrettier(styleMatch.content.trim(), lang)
+    result += "\n<style" + styleMatch.attrs + ">\n" + formattedStyle + "\n</style>\n"
   }
 
   return result
