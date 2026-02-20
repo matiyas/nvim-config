@@ -2,60 +2,73 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
-vim.keymap.set("n", "<leader>/", function()
-  require("telescope").extensions.live_grep_args.live_grep_args()
-end, { desc = "Live Grep with args" })
+--- Returns search directories including shared folder when in scout/admin.
+local function get_search_dirs()
+  local cwd = vim.fn.getcwd()
+  local parent = vim.fn.fnamemodify(cwd, ':h')
+  local shared = parent .. '/shared'
 
-vim.keymap.set("n", "<leader><leader>", function()
-  require("telescope.builtin").find_files({
-    cwd = vim.fn.getcwd(), -- this makes sure it uses `:pwd` as the root
+  if vim.fn.isdirectory(shared) == 0 then return { cwd } end
+
+  local dirname = vim.fn.fnamemodify(cwd, ':t')
+  if dirname == 'scout' or dirname == 'admin' then return { cwd, shared } end
+
+  return { cwd }
+end
+
+vim.keymap.set('n', '<leader>/', function()
+  require('telescope').extensions.live_grep_args.live_grep_args({
+    search_dirs = get_search_dirs(),
   })
-end, { desc = "[Find] Files from CWD" })
+end, { desc = 'Live Grep with args' })
 
-vim.keymap.set("n", "<leader>cp", function()
-  local relative_path = vim.fn.expand("%:.")
-  vim.fn.setreg("+", relative_path)
-  local ok, osc52 = pcall(require, "osc52")
-  if ok then
-    osc52.copy(relative_path)
-  end
-  print("Copied path: " .. relative_path)
-end, { desc = "Copy file relative path" })
+vim.keymap.set('n', '<leader><leader>', function()
+  require('telescope.builtin').find_files({
+    search_dirs = get_search_dirs(),
+  })
+end, { desc = '[Find] Files from CWD' })
 
-vim.keymap.set("n", "<leader>gd", function()
-  -- Check if there's already a diffview tab open
-  for i, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
+vim.keymap.set('n', '<leader>cp', function()
+  local relative_path = vim.fn.expand('%:.')
+  vim.fn.setreg('+', relative_path)
+  local ok, osc52 = pcall(require, 'osc52')
+  if ok then osc52.copy(relative_path) end
+  print('Copied path: ' .. relative_path)
+end, { desc = 'Copy file relative path' })
+
+--- Finds and focuses an existing diffview tab.
+local function focus_diffview_tab()
+  for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
     for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-      local bufnr = vim.api.nvim_win_get_buf(winid)
-      local bufname = vim.api.nvim_buf_get_name(bufnr)
-      -- Look for diffview buffers (they typically start with diffview://)
-      if bufname:match("^diffview://") or bufname:match("DiffviewFiles") then
+      local bufname = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(winid))
+      if bufname:match('^diffview://') or bufname:match('DiffviewFiles') then
         vim.api.nvim_set_current_tabpage(tabpage)
-        return
+        return true
       end
     end
   end
-  -- If no diffview found, open a new one
-  vim.cmd("DiffviewOpen")
-end, { desc = "Open or focus git diff view" })
-vim.keymap.set("n", "<leader>gq", ":DiffviewClose<CR>", { desc = "Close git diff view" })
-vim.keymap.set("n", "<M-C-n>", "<cmd>Scratch<cr>")
-vim.keymap.set("n", "<M-C-o>", "<cmd>ScratchOpen<cr>")
+  return false
+end
 
--- Create LspFormat command
-vim.api.nvim_create_user_command("LspFormat", function()
+vim.keymap.set('n', '<leader>gd', function()
+  if not focus_diffview_tab() then vim.cmd('DiffviewOpen') end
+end, { desc = 'Open or focus git diff view' })
+
+vim.keymap.set('n', '<leader>gq', ':DiffviewClose<CR>', { desc = 'Close git diff view' })
+vim.keymap.set('n', '<M-C-n>', '<cmd>Scratch<cr>')
+vim.keymap.set('n', '<M-C-o>', '<cmd>ScratchOpen<cr>')
+
+vim.api.nvim_create_user_command('LspFormat', function()
   vim.lsp.buf.format({ async = true })
-end, { desc = "Format current buffer with LSP" })
+end, { desc = 'Format current buffer with LSP' })
 
--- Create shortcut for LspFormat
-vim.keymap.set("n", "<leader>lf", "<cmd>LspFormat<cr>", { desc = "Format buffer with LSP" })
+vim.keymap.set('n', '<leader>lf', '<cmd>LspFormat<cr>', { desc = 'Format buffer with LSP' })
 
--- Format JSON with jq
-vim.keymap.set("n", "<leader>jq", function()
-  local filename = vim.fn.expand("%:t")
-  if vim.bo.filetype == "json" or filename:match("%.json$") then
-    vim.cmd(":%!jq .")
-  else
-    print("Not a JSON file")
+vim.keymap.set('n', '<leader>jq', function()
+  local filename = vim.fn.expand('%:t')
+  if vim.bo.filetype ~= 'json' and not filename:match('%.json$') then
+    print('Not a JSON file')
+    return
   end
-end, { desc = "Format JSON with jq" })
+  vim.cmd(':%!jq .')
+end, { desc = 'Format JSON with jq' })
