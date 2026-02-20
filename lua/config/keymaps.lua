@@ -68,7 +68,7 @@ local function create_file_previewer()
         return { 'chafa', '--animate=off', '--center=on', '--size=' .. width .. 'x' .. height, filepath }
       end
 
-      return { 'cat', filepath }
+      return { 'bat', '--style=numbers,changes', '--color=always', '--paging=never', filepath }
     end,
   })
 end
