@@ -51,6 +51,15 @@ local function is_image(filepath)
   return ext and image_extensions[ext:lower()]
 end
 
+--- Returns bat theme matching current nvim colorscheme.
+local function get_bat_theme()
+  local colorscheme = vim.g.colors_name or ''
+  if colorscheme:match('tokyonight%-night') then return 'tokyonight_night' end
+  if colorscheme:match('tokyonight%-day') then return 'tokyonight_day' end
+  if colorscheme:match('tokyonight') then return 'tokyonight_moon' end
+  return 'base16'
+end
+
 --- Creates a termopen previewer that uses chafa for images and cat for text.
 local function create_file_previewer()
   local previewers = require('telescope.previewers')
@@ -68,7 +77,7 @@ local function create_file_previewer()
         return { 'chafa', '--animate=off', '--center=on', '--size=' .. width .. 'x' .. height, filepath }
       end
 
-      return { 'bat', '--style=numbers,changes', '--color=always', '--paging=never', filepath }
+      return { 'bat', '--style=numbers,changes', '--color=always', '--paging=never', '--theme=' .. get_bat_theme(), filepath }
     end,
   })
 end
