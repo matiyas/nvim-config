@@ -74,7 +74,7 @@ local function create_file_previewer()
         local preview = status.preview_win
         local width = vim.api.nvim_win_get_width(preview)
         local height = vim.api.nvim_win_get_height(preview)
-        return { 'chafa', '--animate=off', '--center=on', '--symbols=block+border+space', '--size=' .. width .. 'x' .. height, filepath }
+        return { 'chafa', '--animate=off', '--center=on', '--symbols=block+border-solid', '--fill=block', '--work=9', '--size=' .. width .. 'x' .. height, filepath }
       end
 
       return { 'bat', '--style=numbers,changes', '--color=always', '--paging=never', '--theme=' .. get_bat_theme(), filepath }
