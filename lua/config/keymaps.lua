@@ -84,7 +84,7 @@ vim.keymap.set('n', '<leader><leader>', function()
   require('telescope.builtin').find_files({
     search_dirs = get_search_dirs(),
     path_display = relative_path_display,
-    previewer = get_file_previewer(),
+    previewer = create_file_previewer(),
   })
 end, { desc = '[Find] Files from CWD' })
 
