@@ -1,113 +1,250 @@
 #!/usr/bin/env node
+/**
+ * Vue Single File Component Formatter
+ *
+ * Formats .vue files by processing each section with appropriate tools:
+ * - <template>: js-beautify (HTML formatter)
+ * - <script>: prettier with babel parser
+ * - <style>: prettier with css/scss parser
+ *
+ * Usage: cat Component.vue | vue-format
+ *
+ * Handles nested template tags (e.g., <template v-if>, <template v-else>)
+ * by using depth-balanced tag matching instead of simple regex.
+ */
 
-const fs = require("fs")
-const { execSync } = require("child_process")
+const fs = require('fs')
+const { execSync } = require('child_process')
 
-let input = ""
-process.stdin.setEncoding("utf8")
-process.stdin.on("data", (chunk) => (input += chunk))
-process.stdin.on("end", () => {
-  try {
-    const result = formatVue(input)
-    process.stdout.write(result)
-  } catch (e) {
-    console.error(e.message)
-    process.exit(1)
-  }
-})
+const TEMP_DIR = '/tmp'
+const MAX_BUFFER = 10 * 1024 * 1024
 
-function extractSection(content, tagName) {
-  const openTagRegex = new RegExp(`<${tagName}(\\s[^>]*)?>`, "gi")
-  const closeTag = `</${tagName}>`
+/**
+ * Reads all input from stdin and returns it as a string.
+ * @returns {Promise<string>}
+ */
+function readStdin() {
+  return new Promise((resolve) => {
+    let input = ''
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', (chunk) => (input += chunk))
+    process.stdin.on('end', () => resolve(input))
+  })
+}
 
-  const openMatch = openTagRegex.exec(content)
-  if (!openMatch) return null
+/**
+ * Finds the position of the next opening tag for the given tag name.
+ * @param {string} content - Content to search in
+ * @param {string} tagName - Tag name to find
+ * @returns {number} - Position of next opening tag, or -1 if not found
+ */
+function findNextOpenTag(content, tagName) {
+  return content.search(new RegExp(`<${tagName}(\\s|>)`, 'i'))
+}
 
-  const attrs = openMatch[1] || ""
-  let startIndex = openMatch.index + openMatch[0].length
+/**
+ * Finds the position of the next closing tag for the given tag name.
+ * @param {string} content - Content to search in
+ * @param {string} tagName - Tag name to find
+ * @returns {number} - Position of next closing tag, or -1 if not found
+ */
+function findNextCloseTag(content, tagName) {
+  return content.toLowerCase().indexOf(`</${tagName}>`.toLowerCase())
+}
+
+/**
+ * Finds the matching closing tag position using depth counting.
+ * @param {string} content - Full content
+ * @param {string} tagName - Tag name to match
+ * @param {number} startIndex - Position after opening tag
+ * @returns {number} - Position of matching closing tag, or -1 if not found
+ */
+function findMatchingCloseTag(content, tagName, startIndex) {
+  const closeTagLength = `</${tagName}>`.length
   let depth = 1
   let i = startIndex
 
   while (i < content.length && depth > 0) {
-    const remainingContent = content.slice(i)
-    const nextOpen = remainingContent.search(new RegExp(`<${tagName}(\\s|>)`, "i"))
-    const nextClose = remainingContent.toLowerCase().indexOf(closeTag.toLowerCase())
+    const remaining = content.slice(i)
+    const nextOpen = findNextOpenTag(remaining, tagName)
+    const nextClose = findNextCloseTag(remaining, tagName)
 
-    if (nextClose === -1) break
+    if (nextClose === -1) return -1
 
     if (nextOpen !== -1 && nextOpen < nextClose) {
       depth++
       i += nextOpen + 1
-    } else {
-      depth--
-      if (depth === 0) {
-        return {
-          attrs,
-          content: content.slice(startIndex, i + nextClose)
-        }
-      }
-      i += nextClose + closeTag.length
+      continue
     }
+
+    depth--
+    if (depth === 0) return i + nextClose
+    i += nextClose + closeTagLength
   }
-  return null
+
+  return -1
 }
 
-function formatVue(content) {
-  const templateMatch = extractSection(content, "template")
-  const scriptMatch = extractSection(content, "script")
-  const styleMatch = extractSection(content, "style")
+/**
+ * Extracts a section from Vue SFC content with proper nested tag handling.
+ * @param {string} content - Full Vue SFC content
+ * @param {string} tagName - Section tag name (template, script, style)
+ * @returns {{attrs: string, content: string}|null}
+ */
+function extractSection(content, tagName) {
+  const openTagRegex = new RegExp(`<${tagName}(\\s[^>]*)?>`, 'gi')
+  const openMatch = openTagRegex.exec(content)
 
-  let result = ""
+  if (!openMatch) return null
 
-  if (templateMatch) {
-    const formattedTemplate = formatHtml(templateMatch.content)
-    const indentedTemplate = formattedTemplate
-      .split("\n")
-      .map(line => line.length > 0 ? "  " + line : line)
-      .join("\n")
-    result += "<template" + templateMatch.attrs + ">\n" + indentedTemplate + "\n</template>\n"
-  }
+  const attrs = openMatch[1] || ''
+  const startIndex = openMatch.index + openMatch[0].length
+  const closeIndex = findMatchingCloseTag(content, tagName, startIndex)
 
-  if (scriptMatch) {
-    const formattedScript = formatWithPrettier(scriptMatch.content.trim(), "babel")
-    result += "\n<script" + scriptMatch.attrs + ">\n" + formattedScript + "\n</script>\n"
-  }
+  if (closeIndex === -1) return null
 
-  if (styleMatch) {
-    const lang = styleMatch.attrs.includes("scss") ? "scss" : "css"
-    const formattedStyle = formatWithPrettier(styleMatch.content.trim(), lang)
-    result += "\n<style" + styleMatch.attrs + ">\n" + formattedStyle + "\n</style>\n"
-  }
-
-  return result
+  return { attrs, content: content.slice(startIndex, closeIndex) }
 }
 
+/**
+ * Writes content to a temp file, runs a command, and cleans up.
+ * @param {string} content - Content to write
+ * @param {string} command - Command to execute (file path appended)
+ * @param {string} suffix - Temp file suffix
+ * @returns {string} - Command output
+ */
+function formatWithTempFile(content, command, suffix) {
+  const tmpFile = `${TEMP_DIR}/vue-format-${process.pid}-${suffix}`
+  fs.writeFileSync(tmpFile, content)
+
+  try {
+    return execSync(`${command} ${tmpFile}`, { encoding: 'utf8', maxBuffer: MAX_BUFFER }).trimEnd()
+  } finally {
+    fs.unlinkSync(tmpFile)
+  }
+}
+
+/**
+ * Formats HTML content using js-beautify.
+ * @param {string} html - HTML content
+ * @returns {string} - Formatted HTML
+ */
 function formatHtml(html) {
-  const tmpFile = "/tmp/vue-format-" + process.pid + ".html"
-  fs.writeFileSync(tmpFile, html)
-
-  try {
-    const result = execSync(
-      "npx js-beautify --type html --indent-size 2 --wrap-attributes force-aligned --wrap-line-length 120 --indent-inner-html --preserve-newlines --max-preserve-newlines 2 " + tmpFile,
-      { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }
-    )
-    return result.trimEnd()
-  } finally {
-    fs.unlinkSync(tmpFile)
-  }
+  const cmd =
+    'npx js-beautify --type html --indent-size 2 --wrap-attributes force-aligned ' +
+    '--wrap-line-length 120 --indent-inner-html --preserve-newlines --max-preserve-newlines 2'
+  return formatWithTempFile(html, cmd, 'html')
 }
 
+/**
+ * Formats code using prettier with the specified parser.
+ * @param {string} code - Code to format
+ * @param {string} parser - Prettier parser (babel, css, scss)
+ * @returns {string} - Formatted code
+ */
 function formatWithPrettier(code, parser) {
-  const tmpFile = "/tmp/vue-format-" + process.pid + "-" + parser + ".tmp"
-  fs.writeFileSync(tmpFile, code)
+  const cmd =
+    `npx prettier --parser ${parser} --semi false --single-quote ` +
+    '--trailing-comma none --tab-width 2 --print-width 120'
+  return formatWithTempFile(code, cmd, parser)
+}
 
+/**
+ * Adds indentation to each non-empty line.
+ * @param {string} text - Text to indent
+ * @param {number} spaces - Number of spaces
+ * @returns {string} - Indented text
+ */
+function indent(text, spaces = 2) {
+  const pad = ' '.repeat(spaces)
+  return text
+    .split('\n')
+    .map((line) => (line.length > 0 ? pad + line : line))
+    .join('\n')
+}
+
+/**
+ * Wraps content in a Vue SFC section tag.
+ * @param {string} tagName - Tag name
+ * @param {string} attrs - Tag attributes
+ * @param {string} content - Tag content
+ * @returns {string} - Wrapped section
+ */
+function wrapSection(tagName, attrs, content) {
+  return `<${tagName}${attrs}>\n${content}\n</${tagName}>\n`
+}
+
+/**
+ * Determines the style parser based on attributes.
+ * @param {string} attrs - Style tag attributes
+ * @returns {string} - Parser name (scss or css)
+ */
+function getStyleParser(attrs) {
+  return attrs.includes('scss') ? 'scss' : 'css'
+}
+
+/**
+ * Formats the template section.
+ * @param {{attrs: string, content: string}} section - Extracted section
+ * @returns {string} - Formatted section
+ */
+function formatTemplateSection(section) {
+  const formatted = indent(formatHtml(section.content))
+  return wrapSection('template', section.attrs, formatted)
+}
+
+/**
+ * Formats the script section.
+ * @param {{attrs: string, content: string}} section - Extracted section
+ * @returns {string} - Formatted section
+ */
+function formatScriptSection(section) {
+  const formatted = formatWithPrettier(section.content.trim(), 'babel')
+  return wrapSection('script', section.attrs, formatted)
+}
+
+/**
+ * Formats the style section.
+ * @param {{attrs: string, content: string}} section - Extracted section
+ * @returns {string} - Formatted section
+ */
+function formatStyleSection(section) {
+  const parser = getStyleParser(section.attrs)
+  const formatted = formatWithPrettier(section.content.trim(), parser)
+  return wrapSection('style', section.attrs, formatted)
+}
+
+/**
+ * Formats a complete Vue SFC file.
+ * @param {string} content - Raw Vue SFC content
+ * @returns {string} - Formatted Vue SFC
+ */
+function formatVue(content) {
+  const sections = []
+
+  const template = extractSection(content, 'template')
+  if (template) sections.push(formatTemplateSection(template))
+
+  const script = extractSection(content, 'script')
+  if (script) sections.push(formatScriptSection(script))
+
+  const style = extractSection(content, 'style')
+  if (style) sections.push(formatStyleSection(style))
+
+  return sections.join('\n')
+}
+
+/**
+ * Main entry point.
+ */
+async function main() {
   try {
-    const result = execSync(
-      "npx prettier --parser " + parser + " --semi false --single-quote --trailing-comma none --tab-width 2 --print-width 120 " + tmpFile,
-      { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 }
-    )
-    return result.trimEnd()
-  } finally {
-    fs.unlinkSync(tmpFile)
+    const input = await readStdin()
+    process.stdout.write(formatVue(input))
+  } catch (e) {
+    console.error(e.message)
+    process.exit(1)
   }
 }
+
+main()
