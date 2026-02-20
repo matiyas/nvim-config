@@ -21,15 +21,39 @@ local function get_search_dirs()
   return dirs
 end
 
+--- Converts absolute path to relative path from cwd, showing ../sibling for sibling dirs.
+local function make_relative_path(absolute_path)
+  local cwd = vim.fn.getcwd()
+  local parent = vim.fn.fnamemodify(cwd, ':h')
+
+  if absolute_path:sub(1, #cwd) == cwd then
+    local rel = absolute_path:sub(#cwd + 2)
+    return rel ~= '' and rel or '.'
+  end
+
+  if absolute_path:sub(1, #parent) == parent then
+    return '..' .. absolute_path:sub(#parent + 1)
+  end
+
+  return absolute_path
+end
+
+--- Custom path display for telescope showing relative paths.
+local function relative_path_display(_, path)
+  return make_relative_path(path)
+end
+
 vim.keymap.set('n', '<leader>/', function()
   require('telescope').extensions.live_grep_args.live_grep_args({
     search_dirs = get_search_dirs(),
+    path_display = relative_path_display,
   })
 end, { desc = 'Live Grep with args' })
 
 vim.keymap.set('n', '<leader><leader>', function()
   require('telescope.builtin').find_files({
     search_dirs = get_search_dirs(),
+    path_display = relative_path_display,
   })
 end, { desc = '[Find] Files from CWD' })
 
