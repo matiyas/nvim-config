@@ -148,3 +148,7 @@ vim.keymap.set('n', '<leader>jq', function()
   end
   vim.cmd(':%!jq .')
 end, { desc = 'Format JSON with jq' })
+
+-- Fix Home/End keys sending <Find>/<Select> in some terminals (e.g., tmux)
+vim.keymap.set({ 'i', 'n', 'v' }, '<Find>', '<Home>')
+vim.keymap.set({ 'i', 'n', 'v' }, '<Select>', '<End>')
