@@ -22,6 +22,9 @@ return {
         markdown = {
           require("formatter.filetypes.markdown").prettier,
         },
+        json = {
+          require("formatter.filetypes.json").prettier,
+        },
 
         -- Vue: custom formatter (js-beautify for template + prettier for script/style)
         vue = {
@@ -68,7 +71,7 @@ return {
     vim.api.nvim_create_augroup("FormatAutogroup", { clear = true })
     vim.api.nvim_create_autocmd("BufWritePost", {
       group = "FormatAutogroup",
-      pattern = { "*.lua", "*.html", "*.css", "*.md", "*.c", "*.cpp", "*.rb", "*.vue" },
+      pattern = { "*.lua", "*.html", "*.css", "*.md", "*.json", "*.c", "*.cpp", "*.rb", "*.vue" },
       command = "FormatWrite",
     })
   end,
