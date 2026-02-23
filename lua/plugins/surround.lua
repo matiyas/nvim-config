@@ -5,21 +5,7 @@ return {
   config = function()
     local nvim_surround = require("nvim-surround")
 
-    nvim_surround.setup({
-      keymaps = {
-        insert = "<C-g>s",
-        insert_line = "<C-g>S",
-        normal = "ys",
-        normal_cur = "yss",
-        normal_line = "yS",
-        normal_cur_line = "ySS",
-        visual = "S",
-        visual_line = "gS",
-        delete = "ds",
-        change = "cs",
-        change_line = "cS",
-      },
-    })
+    nvim_surround.setup({})
 
     vim.api.nvim_create_autocmd("FileType", {
       pattern = "ruby",
