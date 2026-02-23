@@ -4,6 +4,9 @@ return {
   ft = { "vue" },
   init = function()
     vim.g.coc_node_path = "/home/linuxbrew/.linuxbrew/opt/node@18/bin/node"
+
+    -- Setup Vue alias middleware to transform imports for LSP
+    require("vue-alias-middleware").setup()
   end,
   config = function()
     local coc_filetypes = { vue = true }
