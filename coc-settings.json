@@ -1,9 +1,9 @@
 {
-  "volar.enable": false,
-  "vetur.enable": true,
-  "vetur.useWorkspaceDependencies": true,
-  "vetur.completion.autoImport": true,
-  "vetur.validation.template": true,
-  "vetur.validation.script": true,
-  "vetur.validation.style": true
+  "volar.enable": true,
+  "volar.useWorkspaceTsdk": true,
+  "volar.takeOverMode.enabled": false,
+  "volar.completion.autoImportComponent": true,
+  "volar.inlayHints.eventArgumentInInlineHandlers": false,
+  "vue.server.hybridMode": false,
+  "vetur.enable": false
 }
