@@ -72,7 +72,7 @@ local html_tags = {
   tr=1, track=1, u=1, ul=1, var=1, video=1, wbr=1,
 }
 
---- Get tag name under cursor
+--- Get tag name under cursor (only if cursor is ON the tag name itself)
 local function get_tag_under_cursor()
   local line = vim.api.nvim_get_current_line()
   local col = vim.fn.col(".")
@@ -93,12 +93,26 @@ local function get_tag_under_cursor()
     return nil
   end
 
-  local tag = line:sub(last_open + 1):match("^/?([%w%-]+)")
+  -- Extract tag name and check if cursor is within the tag name
+  local after_open = line:sub(last_open + 1)
+  local tag = after_open:match("^/?([%w%-]+)")
   if not tag or html_tags[tag:lower()] then
     return nil
   end
 
-  return tag
+  -- Calculate tag name boundaries
+  local tag_start = last_open + 1
+  if after_open:sub(1, 1) == "/" then
+    tag_start = tag_start + 1  -- Skip the /
+  end
+  local tag_end = tag_start + #tag - 1
+
+  -- Only return tag if cursor is within tag name bounds
+  if col >= tag_start and col <= tag_end then
+    return tag
+  end
+
+  return nil
 end
 
 --- Check if cursor is in template section
