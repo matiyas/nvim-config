@@ -232,11 +232,13 @@ local function parse_component_sections()
 end
 
 --- Find property definition within a specific section
-local function find_in_section(name, section)
+--- target_depth: 1 for computed/methods, 2 for data() return object
+local function find_in_section(name, section, target_depth)
   if not section then
     return nil
   end
 
+  target_depth = target_depth or 1
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local escaped_name = name:gsub("([%.%-%+%[%]%(%)%$%^%%%?%*])", "%%%1")
 
@@ -251,37 +253,32 @@ local function find_in_section(name, section)
     local close_count = select(2, line:gsub("}", "")) + select(2, line:gsub("%]", ""))
 
     -- Check for definitions BEFORE updating depth
-    -- This way, a line like "searchClient() {" is checked when depth = 1
-    -- (The opening brace will increment depth AFTER this check)
     if i == section.start then
-      -- First line: depth starts at 0, then becomes 1 after the opening brace
-      -- Definitions on first line would be unusual, skip
       depth = open_count - close_count
     else
-      -- Check at current depth (before this line's braces)
-      if depth == 1 then
+      -- Check at target depth (before this line's braces)
+      if depth == target_depth then
         -- Method definition: name() { or async name()
         if line:match("^%s*" .. escaped_name .. "%s*%(") or
            line:match("^%s*async%s+" .. escaped_name .. "%s*%(") then
           return i
         end
 
-        -- Spread operator: ...mapGetters etc
-        if line:match("^%s*%.%.%.") then
-          -- Skip spread operators
-        -- Property definition: name: (but not name: this. which is a reference)
-        elseif line:match("^%s*" .. escaped_name .. "%s*:") then
-          -- Exclude patterns that are references, not definitions
-          local after_colon = line:match("^%s*" .. escaped_name .. "%s*:%s*(.+)")
-          if after_colon and not after_colon:match("^this%.") then
+        -- Spread operator: ...mapGetters etc - skip
+        if not line:match("^%s*%.%.%.") then
+          -- Property definition: name: (but not name: this. which is a reference)
+          if line:match("^%s*" .. escaped_name .. "%s*:") then
+            local after_colon = line:match("^%s*" .. escaped_name .. "%s*:%s*(.+)")
+            if not after_colon or not after_colon:match("^this%.") then
+              return i
+            end
+          end
+
+          -- Shorthand: name, or name (at end)
+          if line:match("^%s*" .. escaped_name .. "%s*,$") or
+             line:match("^%s*" .. escaped_name .. "%s*$") then
             return i
           end
-        end
-
-        -- Shorthand: name, or name (at end)
-        if line:match("^%s*" .. escaped_name .. "%s*,$") or
-           line:match("^%s*" .. escaped_name .. "%s*$") then
-          return i
         end
       end
 
@@ -375,13 +372,21 @@ end
 local function find_property_definition(name, current_line)
   local sections = parse_component_sections()
 
-  -- Search order: computed (most common for this.xxx), methods, data, props, watch
-  local search_order = { "computed", "methods", "data", "props", "watch" }
+  -- Search order with target depths:
+  -- data() returns object, so properties are at depth 2
+  -- computed/methods/props/watch are objects, properties at depth 1
+  local search_order = {
+    { name = "computed", depth = 1 },
+    { name = "methods", depth = 1 },
+    { name = "data", depth = 2 },
+    { name = "props", depth = 1 },
+    { name = "watch", depth = 1 },
+  }
 
-  for _, section_name in ipairs(search_order) do
-    local section = sections[section_name]
+  for _, search in ipairs(search_order) do
+    local section = sections[search.name]
     if section then
-      local def_line = find_in_section(name, section)
+      local def_line = find_in_section(name, section, search.depth)
       if def_line and def_line ~= current_line then
         return def_line, nil -- line in current file
       end
@@ -442,6 +447,25 @@ local keywords = {
   ["try"] = 1, ["catch"] = 1, ["finally"] = 1, ["throw"] = 1,
 }
 
+--- Check if current line is an import and get the path
+local function get_import_path_on_line()
+  local line = vim.api.nvim_get_current_line()
+
+  -- Static import: import X from 'path'
+  local path = line:match("import%s+[%w_]+%s+from%s+[\"']([^\"']+)[\"']")
+  if path then
+    return path
+  end
+
+  -- Dynamic import: () => import('path')
+  path = line:match("import%s*%([\"']([^\"']+)[\"']%)")
+  if path then
+    return path
+  end
+
+  return nil
+end
+
 --- Go to definition
 function M.goto_definition()
   if vim.bo.filetype ~= "vue" then
@@ -450,17 +474,27 @@ function M.goto_definition()
   end
 
   local word = get_word_under_cursor()
+  local filepath = vim.api.nvim_buf_get_name(0)
+
+  -- Check if on import line - go to imported file
+  local import_path = get_import_path_on_line()
+  if import_path then
+    local resolved = resolve_alias(import_path, filepath)
+    if resolved then
+      vim.cmd("edit " .. vim.fn.fnameescape(resolved))
+      return
+    end
+  end
 
   -- Check if on template tag (component)
   if is_in_template() then
     local tag = get_tag_under_cursor()
     if tag then
       local component_name = kebab_to_pascal(tag)
-      local import_path = find_component_import(component_name)
+      local component_import = find_component_import(component_name)
 
-      if import_path then
-        local filepath = vim.api.nvim_buf_get_name(0)
-        local resolved = resolve_alias(import_path, filepath)
+      if component_import then
+        local resolved = resolve_alias(component_import, filepath)
 
         if resolved then
           vim.cmd("edit " .. vim.fn.fnameescape(resolved))
