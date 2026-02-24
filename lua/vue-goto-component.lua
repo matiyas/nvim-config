@@ -1,5 +1,20 @@
 local M = {}
 
+local function check_dependencies()
+  if vim.fn.exists("*CocAction") == 0 then
+    error("vue-goto-component requires CoC (coc.nvim)")
+  end
+
+  local coc_config = vim.fn.CocAction("getConfig", "volar")
+  if not coc_config or coc_config.enable == false then
+    error("vue-goto-component requires Volar (coc-volar with volar.enable = true)")
+  end
+end
+
+local function coc_jump_definition()
+  vim.fn.CocAction("jumpDefinition")
+end
+
 local HTML_TAGS = {
   a=1, abbr=1, address=1, area=1, article=1, aside=1, audio=1, b=1, base=1,
   bdi=1, bdo=1, blockquote=1, body=1, br=1, button=1, canvas=1, caption=1,
@@ -425,7 +440,7 @@ end
 
 function M.goto_definition()
   if vim.bo.filetype ~= "vue" then
-    vim.fn.CocAction("jumpDefinition")
+    coc_jump_definition()
 
     return
   end
@@ -436,7 +451,11 @@ function M.goto_definition()
   if try_component_navigation(filepath) then return end
   if try_property_navigation(get_word_under_cursor()) then return end
 
-  vim.fn.CocAction("jumpDefinition")
+  coc_jump_definition()
+end
+
+function M.setup()
+  check_dependencies()
 end
 
 return M
