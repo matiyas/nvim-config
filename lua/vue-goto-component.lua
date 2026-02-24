@@ -139,6 +139,309 @@ local function find_component_import(component_name)
   return nil
 end
 
+--- Find script section boundaries
+local function get_script_range()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local start_line, end_line = nil, nil
+
+  for i, line in ipairs(lines) do
+    if line:match("^%s*<script") then
+      start_line = i
+    elseif line:match("^%s*</script>") and start_line then
+      end_line = i
+      break
+    end
+  end
+
+  return start_line, end_line
+end
+
+--- Parse Vue component options to find section boundaries
+--- Returns: { data = {start, end}, computed = {start, end}, methods = {start, end}, ... }
+local function parse_component_sections()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local script_start, script_end = get_script_range()
+
+  if not script_start or not script_end then
+    return {}
+  end
+
+  local sections = {}
+  local section_patterns = {
+    "data", "computed", "methods", "props", "watch",
+    "created", "mounted", "updated", "destroyed",
+    "beforeCreate", "beforeMount", "beforeUpdate", "beforeDestroy"
+  }
+
+  -- Find export default and track brace depth
+  local in_export = false
+  local export_depth = 0
+
+  for i = script_start, script_end do
+    local line = lines[i]
+
+    -- Detect export default {
+    if line:match("export%s+default%s*{") or line:match("export%s+default%s*$") then
+      in_export = true
+    end
+
+    if in_export then
+      -- Track depth by counting braces
+      local open_count = select(2, line:gsub("{", ""))
+      local close_count = select(2, line:gsub("}", ""))
+      export_depth = export_depth + open_count - close_count
+
+      -- At depth 1, we're directly inside export default { }
+      -- Look for section definitions
+      for _, section in ipairs(section_patterns) do
+        -- Match: sectionName() { or sectionName: { or sectionName: [
+        local pattern1 = "^%s*" .. section .. "%s*%(%s*%)%s*{"
+        local pattern2 = "^%s*" .. section .. "%s*:%s*{"
+        local pattern3 = "^%s*" .. section .. "%s*:%s*%["
+        local pattern4 = "^%s*" .. section .. "%s*:%s*function"
+        local pattern5 = "^%s*async%s+" .. section .. "%s*%("
+
+        if line:match(pattern1) or line:match(pattern2) or
+           line:match(pattern3) or line:match(pattern4) or
+           line:match(pattern5) then
+          -- Found section start, now find its end by tracking depth
+          local section_depth = 0
+          local section_start = i
+
+          for j = i, script_end do
+            local sline = lines[j]
+            local sopen = select(2, sline:gsub("{", "")) + select(2, sline:gsub("%[", ""))
+            local sclose = select(2, sline:gsub("}", "")) + select(2, sline:gsub("%]", ""))
+            section_depth = section_depth + sopen - sclose
+
+            if section_depth == 0 and j > i then
+              sections[section] = { start = section_start, finish = j }
+              break
+            end
+          end
+        end
+      end
+
+      if export_depth == 0 then
+        break
+      end
+    end
+  end
+
+  return sections
+end
+
+--- Find property definition within a specific section
+local function find_in_section(name, section)
+  if not section then
+    return nil
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local escaped_name = name:gsub("([%.%-%+%[%]%(%)%$%^%%%?%*])", "%%%1")
+
+  -- Track depth to find definitions at the right level
+  local depth = 0
+
+  for i = section.start, section.finish do
+    local line = lines[i]
+
+    -- Count braces on this line
+    local open_count = select(2, line:gsub("{", "")) + select(2, line:gsub("%[", ""))
+    local close_count = select(2, line:gsub("}", "")) + select(2, line:gsub("%]", ""))
+
+    -- Check for definitions BEFORE updating depth
+    -- This way, a line like "searchClient() {" is checked when depth = 1
+    -- (The opening brace will increment depth AFTER this check)
+    if i == section.start then
+      -- First line: depth starts at 0, then becomes 1 after the opening brace
+      -- Definitions on first line would be unusual, skip
+      depth = open_count - close_count
+    else
+      -- Check at current depth (before this line's braces)
+      if depth == 1 then
+        -- Method definition: name() { or async name()
+        if line:match("^%s*" .. escaped_name .. "%s*%(") or
+           line:match("^%s*async%s+" .. escaped_name .. "%s*%(") then
+          return i
+        end
+
+        -- Spread operator: ...mapGetters etc
+        if line:match("^%s*%.%.%.") then
+          -- Skip spread operators
+        -- Property definition: name: (but not name: this. which is a reference)
+        elseif line:match("^%s*" .. escaped_name .. "%s*:") then
+          -- Exclude patterns that are references, not definitions
+          local after_colon = line:match("^%s*" .. escaped_name .. "%s*:%s*(.+)")
+          if after_colon and not after_colon:match("^this%.") then
+            return i
+          end
+        end
+
+        -- Shorthand: name, or name (at end)
+        if line:match("^%s*" .. escaped_name .. "%s*,$") or
+           line:match("^%s*" .. escaped_name .. "%s*$") then
+          return i
+        end
+      end
+
+      -- Update depth after checking
+      depth = depth + open_count - close_count
+    end
+  end
+
+  return nil
+end
+
+--- Find mixin imports and their file paths
+local function find_mixins()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local mixins = {}
+
+  for _, line in ipairs(lines) do
+    -- import MixinName from 'path'
+    local name, path = line:match("import%s+([%w_]+)%s+from%s+[\"']([^\"']+)[\"']")
+    if name then
+      mixins[name] = path
+    end
+  end
+
+  -- Find mixins array in component
+  local script_start, script_end = get_script_range()
+  if not script_start then
+    return {}
+  end
+
+  local used_mixins = {}
+  local in_mixins = false
+  local depth = 0
+
+  for i = script_start, script_end do
+    local line = lines[i]
+
+    if line:match("^%s*mixins%s*:%s*%[") then
+      in_mixins = true
+    end
+
+    if in_mixins then
+      depth = depth + select(2, line:gsub("%[", "")) - select(2, line:gsub("%]", ""))
+
+      -- Extract mixin names
+      for mixin_name in line:gmatch("([%w_]+)") do
+        if mixins[mixin_name] then
+          table.insert(used_mixins, { name = mixin_name, path = mixins[mixin_name] })
+        end
+      end
+
+      if depth == 0 then
+        break
+      end
+    end
+  end
+
+  return used_mixins
+end
+
+--- Search for property in mixin files
+local function find_in_mixins(name)
+  local mixins = find_mixins()
+  local filepath = vim.api.nvim_buf_get_name(0)
+
+  for _, mixin in ipairs(mixins) do
+    local resolved = resolve_alias(mixin.path, filepath)
+    if resolved and vim.fn.filereadable(resolved) == 1 then
+      -- Read mixin file and search for property
+      local mixin_lines = vim.fn.readfile(resolved)
+      local escaped_name = name:gsub("([%.%-%+%[%]%(%)%$%^%%%?%*])", "%%%1")
+
+      for i, line in ipairs(mixin_lines) do
+        -- Method: name() { or async name()
+        if line:match("^%s*" .. escaped_name .. "%s*%(") or
+           line:match("^%s*async%s+" .. escaped_name .. "%s*%(") then
+          return resolved, i
+        end
+        -- Property: name:
+        if line:match("^%s*" .. escaped_name .. "%s*:") then
+          return resolved, i
+        end
+      end
+    end
+  end
+
+  return nil, nil
+end
+
+--- Find property/method definition
+local function find_property_definition(name, current_line)
+  local sections = parse_component_sections()
+
+  -- Search order: computed (most common for this.xxx), methods, data, props, watch
+  local search_order = { "computed", "methods", "data", "props", "watch" }
+
+  for _, section_name in ipairs(search_order) do
+    local section = sections[section_name]
+    if section then
+      local def_line = find_in_section(name, section)
+      if def_line and def_line ~= current_line then
+        return def_line, nil -- line in current file
+      end
+    end
+  end
+
+  -- Search in mixins
+  local mixin_file, mixin_line = find_in_mixins(name)
+  if mixin_file then
+    return mixin_line, mixin_file
+  end
+
+  return nil, nil
+end
+
+--- Get word under cursor
+local function get_word_under_cursor()
+  local line = vim.api.nvim_get_current_line()
+  local col = vim.fn.col(".")
+
+  local start_col = col
+  local end_col = col
+
+  while start_col > 1 do
+    local c = line:sub(start_col - 1, start_col - 1)
+    if c:match("[%w_]") then
+      start_col = start_col - 1
+    else
+      break
+    end
+  end
+
+  while end_col <= #line do
+    local c = line:sub(end_col, end_col)
+    if c:match("[%w_]") then
+      end_col = end_col + 1
+    else
+      break
+    end
+  end
+
+  if start_col >= end_col then
+    return nil
+  end
+
+  return line:sub(start_col, end_col - 1)
+end
+
+--- Keywords to skip
+local keywords = {
+  ["true"] = 1, ["false"] = 1, ["null"] = 1, ["undefined"] = 1,
+  ["if"] = 1, ["else"] = 1, ["for"] = 1, ["while"] = 1, ["do"] = 1,
+  ["return"] = 1, ["function"] = 1, ["const"] = 1, ["let"] = 1, ["var"] = 1,
+  ["this"] = 1, ["new"] = 1, ["typeof"] = 1, ["instanceof"] = 1,
+  ["import"] = 1, ["export"] = 1, ["default"] = 1, ["from"] = 1,
+  ["async"] = 1, ["await"] = 1, ["class"] = 1, ["extends"] = 1,
+  ["in"] = 1, ["of"] = 1, ["switch"] = 1, ["case"] = 1, ["break"] = 1,
+  ["try"] = 1, ["catch"] = 1, ["finally"] = 1, ["throw"] = 1,
+}
+
 --- Go to definition
 function M.goto_definition()
   if vim.bo.filetype ~= "vue" then
@@ -146,7 +449,9 @@ function M.goto_definition()
     return
   end
 
-  -- Check if on template tag
+  local word = get_word_under_cursor()
+
+  -- Check if on template tag (component)
   if is_in_template() then
     local tag = get_tag_under_cursor()
     if tag then
@@ -162,6 +467,35 @@ function M.goto_definition()
           return
         end
       end
+    end
+  end
+
+  -- Try to find property/method definition
+  if word and not keywords[word] then
+    local current_line = vim.fn.line(".")
+    local def_line, def_file = find_property_definition(word, current_line)
+
+    if def_file then
+      -- Definition is in another file (mixin)
+      vim.cmd("edit " .. vim.fn.fnameescape(def_file))
+      vim.api.nvim_win_set_cursor(0, { def_line, 0 })
+      vim.cmd("normal! ^")
+      local line = vim.api.nvim_get_current_line()
+      local pos = line:find(word, 1, true)
+      if pos then
+        vim.api.nvim_win_set_cursor(0, { def_line, pos - 1 })
+      end
+      return
+    elseif def_line then
+      -- Definition is in current file
+      vim.api.nvim_win_set_cursor(0, { def_line, 0 })
+      vim.cmd("normal! ^")
+      local line = vim.api.nvim_get_current_line()
+      local pos = line:find(word, 1, true)
+      if pos then
+        vim.api.nvim_win_set_cursor(0, { def_line, pos - 1 })
+      end
+      return
     end
   end
 
