@@ -22,16 +22,44 @@ end
 --- Resolve @/ or ~/ path to absolute file path
 local function resolve_alias(import_path, current_file)
   local current_dir = vim.fn.fnamemodify(current_file, ":h")
+  local project_root = find_project_root(current_dir)
 
   local abs_path
   if import_path:match("^[@~]/") then
-    local project_root = find_project_root(current_dir)
     if not project_root then
       return nil
     end
     abs_path = project_root .. "/" .. import_path:gsub("^[@~]/", "")
   elseif import_path:match("^%.") then
     abs_path = vim.fn.simplify(current_dir .. "/" .. import_path)
+  elseif not import_path:match("^/") then
+    -- Node modules path (no prefix)
+    if not project_root then
+      return nil
+    end
+    -- Try node_modules resolution
+    local node_path = project_root .. "/node_modules/" .. import_path
+    local entry_points = { "/dist/index.js", "/index.js", "/dist/index.esm.js", ".js" }
+    for _, entry in ipairs(entry_points) do
+      local try_path = node_path .. entry
+      if vim.fn.filereadable(try_path) == 1 then
+        return try_path
+      end
+    end
+    -- Try package.json main field
+    local pkg_json = node_path .. "/package.json"
+    if vim.fn.filereadable(pkg_json) == 1 then
+      local content = vim.fn.readfile(pkg_json)
+      local json_str = table.concat(content, "\n")
+      local main = json_str:match('"main"%s*:%s*"([^"]+)"')
+      if main then
+        local main_path = node_path .. "/" .. main
+        if vim.fn.filereadable(main_path) == 1 then
+          return main_path
+        end
+      end
+    end
+    return nil
   else
     return nil
   end
