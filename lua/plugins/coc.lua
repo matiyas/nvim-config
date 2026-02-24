@@ -4,9 +4,6 @@ return {
   ft = { "vue" },
   init = function()
     vim.g.coc_node_path = "/home/linuxbrew/.linuxbrew/opt/node@18/bin/node"
-
-    -- Setup Vue alias middleware to transform imports for LSP
-    require("vue-alias-middleware").setup()
   end,
   config = function()
     local coc_filetypes = { vue = true }
@@ -20,7 +17,15 @@ return {
       vim.keymap.set("i", "<cr>", [[coc#pum#visible() ? coc#pum#confirm() : "\<CR>"]], opts)
 
       local nopts = { silent = true, buffer = true }
-      vim.keymap.set("n", "gd", "<Plug>(coc-definition)", nopts)
+
+      vim.keymap.set("n", "gd", function()
+        if vim.bo.filetype == "vue" then
+          -- Use helper that temporarily resolves paths, then calls CoC
+          require("vue-goto-component").goto_definition()
+        else
+          vim.fn.CocAction("jumpDefinition")
+        end
+      end, nopts)
       vim.keymap.set("n", "gr", "<Plug>(coc-references)", nopts)
       vim.keymap.set("n", "gI", "<Plug>(coc-implementation)", nopts)
       vim.keymap.set("n", "gy", "<Plug>(coc-type-definition)", nopts)
