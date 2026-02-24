@@ -27,9 +27,7 @@ local KEYWORDS = {
 
 local EXTENSIONS = { "", ".vue", ".js", ".ts", ".jsx", ".tsx" }
 
-local SECTION_DEPTHS = {
-  computed = 1, methods = 1, data = 2, props = 1, watch = 1,
-}
+local SECTION_DEPTHS = { computed = 1, methods = 1, data = 2, props = 1, watch = 1 }
 
 local function file_exists(path)
   return vim.fn.filereadable(path) == 1
@@ -46,6 +44,7 @@ end
 local function count_braces(line)
   local open = select(2, line:gsub("{", "")) + select(2, line:gsub("%[", ""))
   local close = select(2, line:gsub("}", "")) + select(2, line:gsub("%]", ""))
+
   return open - close
 end
 
@@ -61,6 +60,7 @@ local function find_project_root(start_dir)
     end
     dir = vim.fn.fnamemodify(dir, ":h")
   end
+
   return nil
 end
 
@@ -71,27 +71,25 @@ local function find_with_extension(base_path)
       return path
     end
   end
+
   return nil
 end
 
 local function resolve_alias_path(path, project_root)
-  if not path:match("^[@~]/") or not project_root then
-    return nil
-  end
+  if not path:match("^[@~]/") or not project_root then return nil end
+
   return find_with_extension(project_root .. "/" .. path:gsub("^[@~]/", ""))
 end
 
 local function resolve_relative_path(path, current_dir)
-  if not path:match("^%.") then
-    return nil
-  end
+  if not path:match("^%.") then return nil end
+
   return find_with_extension(vim.fn.simplify(current_dir .. "/" .. path))
 end
 
 local function resolve_node_module(path, project_root)
-  if path:match("^[/@~%.]") or not project_root then
-    return nil
-  end
+  if path:match("^[/@~%.]") or not project_root then return nil end
+
   local node_path = project_root .. "/node_modules/" .. path
   local entries = { "/dist/index.js", "/index.js", "/dist/index.esm.js", ".js" }
   for _, entry in ipairs(entries) do
@@ -107,12 +105,14 @@ local function resolve_node_module(path, project_root)
       return node_path .. "/" .. main
     end
   end
+
   return nil
 end
 
 local function resolve_path(import_path, current_file)
   local current_dir = vim.fn.fnamemodify(current_file, ":h")
   local project_root = find_project_root(current_dir)
+
   return resolve_alias_path(import_path, project_root)
       or resolve_relative_path(import_path, current_dir)
       or resolve_node_module(import_path, project_root)
@@ -132,9 +132,9 @@ local function get_word_under_cursor()
   while end_col <= #line and line:sub(end_col, end_col):match("[%w_]") do
     end_col = end_col + 1
   end
-  if start_col >= end_col then
-    return nil
-  end
+
+  if start_col >= end_col then return nil end
+
   return line:sub(start_col, end_col - 1)
 end
 
@@ -146,6 +146,7 @@ local function find_last_unclosed_bracket(text)
     elseif c == ">" then last_open = 0
     end
   end
+
   return last_open
 end
 
@@ -153,20 +154,20 @@ local function get_tag_under_cursor()
   local line = get_current_line()
   local col = vim.fn.col(".")
   local last_open = find_last_unclosed_bracket(line:sub(1, col))
-  if last_open == 0 then
-    return nil
-  end
+
+  if last_open == 0 then return nil end
+
   local after_open = line:sub(last_open + 1)
   local tag = after_open:match("^/?([%w%-]+)")
-  if not tag or HTML_TAGS[tag:lower()] then
-    return nil
-  end
+
+  if not tag or HTML_TAGS[tag:lower()] then return nil end
+
   local tag_start = last_open + (after_open:sub(1, 1) == "/" and 2 or 1)
   local tag_end = tag_start + #tag - 1
-  if col >= tag_start and col <= tag_end then
-    return tag
-  end
-  return nil
+
+  if col < tag_start or col > tag_end then return nil end
+
+  return tag
 end
 
 local function is_in_template()
@@ -177,6 +178,7 @@ local function is_in_template()
     elseif line:match("^</template>") then in_template = false
     end
   end
+
   return in_template
 end
 
@@ -189,6 +191,7 @@ local function get_script_range(lines)
       break
     end
   end
+
   return start_line, end_line
 end
 
@@ -196,14 +199,17 @@ local function find_import_path(lines, name)
   for _, line in ipairs(lines) do
     local n, p = line:match("import%s+(" .. name .. ")%s+from%s+[\"']([^\"']+)[\"']")
     if n then return p end
+
     n, p = line:match("(" .. name .. ")%s*:%s*%(%s*%)%s*=>%s*import%s*%([\"']([^\"']+)[\"']%)")
     if n then return p end
   end
+
   return nil
 end
 
 local function get_import_path_on_line()
   local line = get_current_line()
+
   return line:match("import%s+[%w_]+%s+from%s+[\"']([^\"']+)[\"']")
       or line:match("import%s*%([\"']([^\"']+)[\"']%)")
 end
@@ -224,12 +230,15 @@ local function find_section_end(lines, start_idx, end_idx)
       return j
     end
   end
+
   return end_idx
 end
 
 local function parse_sections(lines)
   local script_start, script_end = get_script_range(lines)
+
   if not script_start then return {} end
+
   local sections = {}
   local in_export, export_depth = false, 0
   for i = script_start, script_end do
@@ -245,6 +254,7 @@ local function parse_sections(lines)
       if export_depth == 0 then break end
     end
   end
+
   return sections
 end
 
@@ -252,17 +262,22 @@ local function matches_definition(line, escaped_name)
   if line:match("^%s*" .. escaped_name .. "%s*%(") then return true end
   if line:match("^%s*async%s+" .. escaped_name .. "%s*%(") then return true end
   if line:match("^%s*%.%.%.") then return false end
+
   if line:match("^%s*" .. escaped_name .. "%s*:") then
     local after = line:match("^%s*" .. escaped_name .. "%s*:%s*(.+)")
+
     return not after or not after:match("^this%.")
   end
+
   if line:match("^%s*" .. escaped_name .. "%s*,$") then return true end
   if line:match("^%s*" .. escaped_name .. "%s*$") then return true end
+
   return false
 end
 
 local function find_in_section(lines, name, section, target_depth)
   if not section then return nil end
+
   local escaped = escape_pattern(name)
   local depth = 0
   for i = section.start, section.finish do
@@ -275,6 +290,7 @@ local function find_in_section(lines, name, section, target_depth)
       depth = depth + count_braces(lines[i])
     end
   end
+
   return nil
 end
 
@@ -285,7 +301,9 @@ local function find_used_mixins(lines)
     if name then imports[name] = path end
   end
   local script_start, script_end = get_script_range(lines)
+
   if not script_start then return {} end
+
   local used, in_mixins, depth = {}, false, 0
   for i = script_start, script_end do
     local line = lines[i]
@@ -300,6 +318,7 @@ local function find_used_mixins(lines)
       if depth == 0 then break end
     end
   end
+
   return used
 end
 
@@ -312,6 +331,7 @@ local function find_in_mixin_file(mixin_lines, name)
       return i
     end
   end
+
   return nil
 end
 
@@ -323,6 +343,7 @@ local function find_in_mixins(lines, name, filepath)
       if line then return line, resolved end
     end
   end
+
   return nil, nil
 end
 
@@ -337,6 +358,7 @@ local function find_property(name, current_line)
       end
     end
   end
+
   return find_in_mixins(lines, name, vim.api.nvim_buf_get_name(0))
 end
 
@@ -354,48 +376,66 @@ end
 
 local function try_import_navigation(filepath)
   local import_path = get_import_path_on_line()
+
   if not import_path then return false end
+
   local resolved = resolve_path(import_path, filepath)
   if resolved then
     vim.cmd("edit " .. vim.fn.fnameescape(resolved))
+
     return true
   end
+
   return false
 end
 
 local function try_component_navigation(filepath)
   if not is_in_template() then return false end
+
   local tag = get_tag_under_cursor()
+
   if not tag then return false end
+
   local import_path = find_import_path(get_buffer_lines(), kebab_to_pascal(tag))
+
   if not import_path then return false end
+
   local resolved = resolve_path(import_path, filepath)
   if resolved then
     vim.cmd("edit " .. vim.fn.fnameescape(resolved))
+
     return true
   end
+
   return false
 end
 
 local function try_property_navigation(word)
   if not word or KEYWORDS[word] then return false end
+
   local line, file = find_property(word, vim.fn.line("."))
   if line then
     navigate_to(line, file, word)
+
     return true
   end
+
   return false
 end
 
 function M.goto_definition()
   if vim.bo.filetype ~= "vue" then
     vim.fn.CocAction("jumpDefinition")
+
     return
   end
+
   local filepath = vim.api.nvim_buf_get_name(0)
+
   if try_import_navigation(filepath) then return end
   if try_component_navigation(filepath) then return end
   if try_property_navigation(get_word_under_cursor()) then return end
+
   vim.fn.CocAction("jumpDefinition")
 end
 
