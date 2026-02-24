@@ -48,5 +48,12 @@ return {
       pattern = vim.tbl_keys(coc_filetypes),
       callback = setup_coc_keymaps,
     })
+
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "CocNvimInit",
+      callback = function()
+        require("vue-goto-component").setup()
+      end,
+    })
   end,
 }
