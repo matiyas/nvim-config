@@ -95,6 +95,10 @@ return {
       view.panel:update_components()
       view.panel:render()
       view.panel:redraw()
+
+      -- Move cursor to next file
+      view.panel:set_cur_file(new_entry)
+      view:next_file()
     end
 
     require("diffview").setup({
