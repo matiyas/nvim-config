@@ -43,8 +43,8 @@ syn match x12Segments "^\([A-Z][A-Z0-9]\{1,2\}\)"
 
 let b:current_syntax = "x12"
 
-hi def x12ElmDelimiter ctermfg=Yellow guifg=#FFFF00
-hi def x12SubDelimiter ctermfg=Magenta guifg=#FF00FF
-hi def x12SegDelimiter ctermfg=Red guifg=#FF0000
-hi def x12Envelope     ctermfg=Cyan guifg=#00FFFF gui=bold cterm=bold
-hi def x12Segments     ctermfg=Green guifg=#00FF00
+hi def link x12ElmDelimiter Operator
+hi def link x12SubDelimiter Special
+hi def link x12SegDelimiter SpecialChar
+hi def link x12Envelope     Keyword
+hi def link x12Segments     Function
