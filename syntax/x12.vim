@@ -1,5 +1,5 @@
 " Vim syntax file for ANSI X12 EDI
-" Fixed version - escapes special regex chars in delimiters
+" Fixed version - handles variable-length ISA and escapes special regex chars
 
 if exists("b:current_syntax")
   finish
@@ -13,18 +13,29 @@ else
   finish
 endif
 
-let b:elmdl = escape(b:ISA[3:3], '\^$.*~[]>')
-let b:subdl = escape(b:ISA[104:104], '\^$.*~[]>')
+" Element delimiter is always at position 3
+let b:elmdl = b:ISA[3:3]
 
-if strlen(b:ISA) > 105
-  let b:segdl = escape(b:ISA[105:105], '\^$.*~[]>')
+" Sub-element delimiter (ISA16) is last char for variable-length ISA
+" or position 104 for standard 106-char ISA
+let s:len = strlen(b:ISA)
+if s:len > 105
+  let b:subdl = b:ISA[104:104]
+  let b:segdl = b:ISA[105:105]
+else
+  let b:subdl = b:ISA[s:len - 1:s:len - 1]
 endif
 
-exe 'syn match x12ElmDelimiter "\V' . b:elmdl . '"'
-exe 'syn match x12SubDelimiter "\V' . b:subdl . '"'
+" Escape for very-nomagic mode (only backslash needs escaping)
+let s:elm_esc = escape(b:elmdl, '\')
+let s:sub_esc = escape(b:subdl, '\')
+
+exe 'syn match x12ElmDelimiter "\V' . s:elm_esc . '"'
+exe 'syn match x12SubDelimiter "\V' . s:sub_esc . '"'
 
 if exists("b:segdl")
-  exe 'syn match x12SegDelimiter "\V' . b:segdl . '"'
+  let s:seg_esc = escape(b:segdl, '\')
+  exe 'syn match x12SegDelimiter "\V' . s:seg_esc . '"'
 endif
 
 syn match x12Envelope "^\(ISA\|GS\|ST\|SE\|GE\|IEA\)"
