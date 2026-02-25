@@ -1,9 +1,9 @@
 return {
-  dir = "~/Workspace/vue-goto-component.nvim",
+  dir = "~/Workspace/vue2-lsp-pathfinder.nvim",
   ft = { "vue" },
   opts = {},
   config = function()
-    require("vue-goto-component").setup()
+    require("vue2-lsp-pathfinder").setup()
 
     vim.api.nvim_create_autocmd("LspAttach", {
       callback = function(args)
@@ -11,7 +11,7 @@ return {
           -- Defer to run after LazyVim sets up its keymaps
           vim.defer_fn(function()
             vim.keymap.set("n", "gd", function()
-              require("vue-goto-component").goto_definition()
+              require("vue2-lsp-pathfinder").goto_definition()
             end, { buffer = args.buf, desc = "Go to definition (Vue)" })
           end, 100)
         end
