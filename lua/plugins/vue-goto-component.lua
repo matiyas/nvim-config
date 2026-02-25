@@ -1,15 +1,18 @@
 return {
   dir = "~/Workspace/vue-goto-component.nvim",
   ft = { "vue" },
-  keys = {
-    {
-      "gd",
-      function()
-        require("vue-goto-component").goto_definition()
-      end,
-      ft = "vue",
-      desc = "Go to definition (Vue)",
-    },
-  },
   opts = {},
+  config = function()
+    require("vue-goto-component").setup()
+
+    vim.api.nvim_create_autocmd("LspAttach", {
+      callback = function(args)
+        if vim.bo[args.buf].filetype == "vue" then
+          vim.keymap.set("n", "gd", function()
+            require("vue-goto-component").goto_definition()
+          end, { buffer = args.buf, desc = "Go to definition (Vue)" })
+        end
+      end,
+    })
+  end,
 }
