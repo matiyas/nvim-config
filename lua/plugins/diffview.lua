@@ -5,8 +5,9 @@ return {
   config = function()
     local lib = require("diffview.lib")
     local utils = require("diffview.utils")
-
-    local pending_refresh = nil
+    local RevType = require("diffview.vcs.rev").RevType
+    local Diff2Hor = require("diffview.scene.layouts.diff_2").Diff2Hor
+    local FileEntry = require("diffview.scene.file_entry").FileEntry
 
     local function fast_toggle_stage()
       local view = lib.get_current_view()
@@ -22,8 +23,9 @@ return {
 
       local adapter = view.adapter
       local success
+      local was_working = item.kind == "working"
 
-      if item.kind == "working" then
+      if was_working then
         success = adapter:add_files({ item.path })
       elseif item.kind == "staged" then
         success = adapter:reset_files({ item.path })
@@ -37,34 +39,62 @@ return {
         return
       end
 
-      -- Remove from source list immediately (fast UI feedback)
       local files = view.files
-      local source_list = item.kind == "working" and files.working or files.staged
+      local source_list = was_working and files.working or files.staged
+      local target_list = was_working and files.staged or files.working
 
+      -- Find and remove from source list
+      local idx
       for i, f in ipairs(source_list) do
         if f.path == item.path then
-          -- Destroy entry (disposes buffers)
-          f:destroy()
-          table.remove(source_list, i)
+          idx = i
           break
         end
       end
-      -- Quick redraw to show file removed
+      if not idx then
+        return
+      end
+
+      -- Destroy old layout (disposes buffers with old revs)
+      item:destroy()
+      table.remove(source_list, idx)
+
+      -- Create new file entry with correct revs for target list
+      local new_revs, new_kind
+      if was_working then
+        -- Moving to staged: revs = { a: HEAD, b: STAGE }
+        new_kind = "staged"
+        local head_rev = adapter:head_rev() or adapter.Rev.new_null_tree()
+        new_revs = {
+          a = head_rev,
+          b = adapter.Rev(RevType.STAGE, 0),
+        }
+      else
+        -- Moving to working: revs = { a: STAGE, b: LOCAL }
+        new_kind = "working"
+        new_revs = {
+          a = view.left,
+          b = view.right,
+        }
+      end
+
+      local new_entry = FileEntry.with_layout(Diff2Hor, {
+        adapter = adapter,
+        path = item.path,
+        oldpath = item.oldpath,
+        status = item.status,
+        stats = item.stats,
+        kind = new_kind,
+        revs = new_revs,
+      })
+
+      table.insert(target_list, new_entry)
+
+      -- Rebuild trees and redraw (no git calls)
       files:update_file_trees()
       view.panel:update_components()
       view.panel:render()
       view.panel:redraw()
-
-      -- Schedule async refresh to add file to target list with correct revs
-      if pending_refresh then
-        pending_refresh:stop()
-      end
-      pending_refresh = vim.defer_fn(function()
-        pending_refresh = nil
-        if view and view.panel then
-          view:update_files()
-        end
-      end, 100)
     end
 
     require("diffview").setup({
