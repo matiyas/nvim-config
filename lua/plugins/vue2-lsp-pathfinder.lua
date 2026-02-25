@@ -1,5 +1,5 @@
 return {
-  dir = "~/Workspace/vue2-lsp-pathfinder.nvim",
+  "matiyas/vue2-lsp-pathfinder.nvim",
   ft = { "vue" },
   opts = {},
   config = function()
