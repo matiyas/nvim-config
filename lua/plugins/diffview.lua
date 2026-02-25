@@ -49,7 +49,6 @@ return {
           break
         end
       end
-
       -- Quick redraw to show file removed
       files:update_file_trees()
       view.panel:update_components()
