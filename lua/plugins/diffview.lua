@@ -6,7 +6,7 @@ return {
     local lib = require("diffview.lib")
     local utils = require("diffview.utils")
     local RevType = require("diffview.vcs.rev").RevType
-    local Diff2Hor = require("diffview.scene.layouts.diff_2").Diff2Hor
+    local Diff2Hor = require("diffview.scene.layouts.diff_2_hor").Diff2Hor
     local FileEntry = require("diffview.scene.file_entry").FileEntry
 
     local function fast_toggle_stage()
