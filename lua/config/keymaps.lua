@@ -140,6 +140,14 @@ end, { desc = 'Format current buffer with LSP' })
 
 vim.keymap.set('n', '<leader>lf', '<cmd>LspFormat<cr>', { desc = 'Format buffer with LSP' })
 
+vim.api.nvim_create_user_command('Format', function()
+  if vim.bo.filetype == 'vue' then
+    vim.cmd('VueSfcFormat')
+  else
+    vim.lsp.buf.format({ async = true })
+  end
+end, { desc = 'Format current buffer' })
+
 vim.keymap.set('n', '<leader>jq', function()
   local filename = vim.fn.expand('%:t')
   if vim.bo.filetype ~= 'json' and not filename:match('%.json$') then
