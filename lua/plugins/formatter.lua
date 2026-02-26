@@ -26,11 +26,11 @@ return {
           require("formatter.filetypes.json").prettier,
         },
 
-        -- Vue: custom formatter (js-beautify for template + prettier for script/style)
+        -- Vue: vue-sfc-format plugin (js-beautify for template + prettier for script/style)
         vue = {
           function()
             return {
-              exe = "vue-format",
+              exe = vim.fn.stdpath("data") .. "/lazy/vue-sfc-format.nvim/bin/vue-sfc-format",
               stdin = true,
             }
           end,
