@@ -1,7 +1,16 @@
 return {
   "matiyas/vue-sfc-format.nvim",
   ft = { "vue" },
-  opts = {},
+  config = function()
+    require("vue-sfc-format").setup()
+
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      pattern = "*.vue",
+      callback = function()
+        require("vue-sfc-format").format()
+      end,
+    })
+  end,
   keys = {
     {
       "<leader>fv",

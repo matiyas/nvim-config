@@ -26,16 +26,6 @@ return {
           require("formatter.filetypes.json").prettier,
         },
 
-        -- Vue: vue-sfc-format plugin (js-beautify for template + prettier for script/style)
-        vue = {
-          function()
-            return {
-              exe = vim.fn.stdpath("data") .. "/lazy/vue-sfc-format.nvim/bin/vue-sfc-format",
-              stdin = true,
-            }
-          end,
-        },
-
         c = {
           require("formatter.filetypes.c").clangformat,
         },
@@ -71,7 +61,7 @@ return {
     vim.api.nvim_create_augroup("FormatAutogroup", { clear = true })
     vim.api.nvim_create_autocmd("BufWritePost", {
       group = "FormatAutogroup",
-      pattern = { "*.lua", "*.html", "*.css", "*.md", "*.json", "*.c", "*.cpp", "*.rb", "*.vue" },
+      pattern = { "*.lua", "*.html", "*.css", "*.md", "*.json", "*.c", "*.cpp", "*.rb" },
       command = "FormatWrite",
     })
   end,
