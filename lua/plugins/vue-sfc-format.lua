@@ -1,5 +1,6 @@
 return {
   "matiyas/vue-sfc-format.nvim",
+  branch = "develop",
   ft = { "vue" },
   config = function()
     require("vue-sfc-format").setup()
